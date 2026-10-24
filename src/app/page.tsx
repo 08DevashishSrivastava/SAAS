@@ -316,7 +316,7 @@ export default function HomePage() {
             ))}
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--color-secondary-text)', margin: 0 }}>
-            © {new Date().getFullYear()} Caption AI. All rights reserved.
+            © 2025 Caption AI. All rights reserved.
           </p>
         </div>
       </footer>

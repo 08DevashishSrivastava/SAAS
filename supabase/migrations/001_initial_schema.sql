@@ -34,7 +34,10 @@ CREATE INDEX IF NOT EXISTS idx_organizations_owner ON organizations(owner_user_i
 -- =============================================================================
 -- ORGANIZATION MEMBERS
 -- =============================================================================
-CREATE TYPE IF NOT EXISTS member_role AS ENUM ('owner', 'admin', 'editor', 'viewer');
+DO $$ BEGIN
+  CREATE TYPE member_role AS ENUM ('owner', 'admin', 'editor', 'viewer');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS organization_members (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -119,8 +122,14 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_notes_fts ON knowledge_notes USING GIN(
 -- =============================================================================
 -- CAPTIONS
 -- =============================================================================
-CREATE TYPE IF NOT EXISTS caption_platform AS ENUM ('instagram', 'facebook', 'general');
-CREATE TYPE IF NOT EXISTS caption_status AS ENUM ('draft', 'scheduling', 'scheduled', 'published', 'failed', 'cancelled');
+DO $$ BEGIN
+  CREATE TYPE caption_platform AS ENUM ('instagram', 'facebook', 'general');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE TYPE caption_status AS ENUM ('draft', 'scheduling', 'scheduled', 'published', 'failed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS captions (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -183,7 +192,10 @@ CREATE TABLE IF NOT EXISTS caption_media (
 -- =============================================================================
 -- SOCIAL CONNECTIONS
 -- =============================================================================
-CREATE TYPE IF NOT EXISTS connection_status AS ENUM ('active', 'inactive', 'error');
+DO $$ BEGIN
+  CREATE TYPE connection_status AS ENUM ('active', 'inactive', 'error');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS social_connections (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -220,7 +232,10 @@ CREATE INDEX IF NOT EXISTS idx_social_accounts_connection ON social_accounts(soc
 -- =============================================================================
 -- SCHEDULED POSTS
 -- =============================================================================
-CREATE TYPE IF NOT EXISTS scheduled_post_status AS ENUM ('pending', 'submitted', 'scheduled', 'published', 'failed', 'cancelled');
+DO $$ BEGIN
+  CREATE TYPE scheduled_post_status AS ENUM ('pending', 'submitted', 'scheduled', 'published', 'failed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS scheduled_posts (
   id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -259,8 +274,14 @@ CREATE INDEX IF NOT EXISTS idx_scheduling_attempts_post ON scheduling_attempts(s
 -- =============================================================================
 -- SUBSCRIPTIONS
 -- =============================================================================
-CREATE TYPE IF NOT EXISTS subscription_plan AS ENUM ('free', 'pro', 'team');
-CREATE TYPE IF NOT EXISTS subscription_status AS ENUM ('active', 'trialing', 'past_due', 'cancelled', 'unpaid');
+DO $$ BEGIN
+  CREATE TYPE subscription_plan AS ENUM ('free', 'pro', 'team');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE TYPE subscription_status AS ENUM ('active', 'trialing', 'past_due', 'cancelled', 'unpaid');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
