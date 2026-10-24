@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { connection } from 'next/server'
 import type { Metadata } from 'next'
+import { getDashboardContext } from '@/lib/supabase/dashboard-context'
 import StreakStats from '@/components/dashboard/streak-stats'
 import ActivityHeatmap from '@/components/dashboard/activity-heatmap'
 import TodaysTopic from '@/components/dashboard/todays-topic'
@@ -11,19 +12,14 @@ import {
   getDateKeyInTimeZone,
   type DailyActivity,
 } from '@/lib/dashboard/streaks'
-import { generatePracticeTopic } from '@/services/ai/topic-generator'
+import { getCuratedTopic } from '@/services/ai/topic-generator'
 
 export const metadata: Metadata = { title: 'Dashboard Overview — Caption AI' }
+export const instant = false
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: practice } = await supabase
-    .from('practices')
-    .select('id, name, practice_type, specialties, preferred_tone, preferred_topics, timezone')
-    .limit(1)
-    .single()
+  await connection()
+  const { supabase, user, practice } = await getDashboardContext()
 
   const practiceId = practice?.id
 
@@ -59,17 +55,9 @@ export default async function DashboardPage() {
   }))
   const timeZone = practice?.timezone || 'UTC'
   const stats = getActivityStats(activity, getDateKeyInTimeZone(new Date(), timeZone))
-  const todayTopic = await generatePracticeTopic({
-    name: practice?.name || 'Healthcare practice',
+  const todayTopic = getCuratedTopic({
     practiceType: practice?.practice_type || null,
     specialties: practice?.specialties || null,
-    tone: practice?.preferred_tone || null,
-    preferredTopics: practice?.preferred_topics || null,
-    notes: (recentNotes ?? []).map((note) => ({
-      title: note.title,
-      content: note.content,
-      category: note.category,
-    })),
   })
 
   const metrics = [

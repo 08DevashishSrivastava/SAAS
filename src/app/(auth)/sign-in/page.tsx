@@ -8,32 +8,103 @@ import { createClient } from '@/lib/supabase/client'
 function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const requestedRedirect = searchParams.get('redirect')
+  const redirectTo = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
+    ? requestedRedirect
+    : '/dashboard'
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
+  const [error, setError] = useState(
+    searchParams.get('error') === 'auth_callback_failed'
+      ? 'This confirmation link could not be verified. It may have expired, already been used, or opened in a different browser. Request a fresh link and open the newest email in the browser where you signed up.'
+      : '',
+  )
   const [form, setForm] = useState({ email: '', password: '' })
+
+  async function handleDemoSignIn() {
+    setError('')
+    setDemoLoading(true)
+    try {
+      const response = await fetch('/api/auth/demo-login', { method: 'POST' })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || 'Demo sign-in is unavailable.')
+      }
+      router.replace(redirectTo)
+      router.refresh()
+    } catch (demoError) {
+      console.error('[Demo Sign In Error]', demoError)
+      setError(demoError instanceof Error ? demoError.message : 'Unable to sign in to the demo account.')
+    } finally {
+      setDemoLoading(false)
+    }
+  }
+
+  async function handleResendConfirmation() {
+    const email = form.email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Enter your email address above to request a fresh confirmation link.')
+      return
+    }
+
+    setError('')
+    setResendMessage('')
+    setResendLoading(true)
+    try {
+      const supabase = createClient()
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
+        },
+      })
+      if (resendError) {
+        setError(resendError.message.toLowerCase().includes('rate limit')
+          ? 'Supabase is temporarily limiting confirmation emails. Wait a while or configure custom SMTP in Supabase Auth, then try again.'
+          : resendError.message)
+        return
+      }
+      setResendMessage('If this account still needs confirmation, a fresh link has been sent. Check your inbox and use the newest email.')
+    } catch (resendError) {
+      console.error('[Resend Confirmation Error]', resendError)
+      setError('Unable to request a new confirmation link. Please try again later.')
+    } finally {
+      setResendLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    const supabase = createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
+    try {
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      })
 
-    if (signInError) {
-      setError(signInError.message === 'Invalid login credentials'
-        ? 'Incorrect email or password. Please try again.'
-        : signInError.message)
+      if (signInError) {
+        const invalidCredentials = signInError.code === 'invalid_credentials'
+          || signInError.message.toLowerCase().includes('invalid login credentials')
+        setError(invalidCredentials
+          ? 'We couldn’t sign you in with that email and password. Check your details, create an account, or reset your password.'
+          : signInError.message)
+        return
+      }
+
+      router.replace(redirectTo)
+      router.refresh()
+    } catch (signInError) {
+      console.error('[Sign In Error]', signInError)
+      setError('Unable to reach the sign-in service. Check your connection and try again.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    router.push(redirectTo)
-    router.refresh()
   }
 
   return (
@@ -53,7 +124,35 @@ function SignInForm() {
 
         {error && (
           <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>
-            <span>⚠</span> {error}
+            <span>⚠</span>
+            <div>
+              {error}{' '}
+              {error.startsWith('We couldn’t sign you in') && (
+                <>
+                  <Link href="/forgot-password" style={{ fontWeight: 600 }}>Reset password</Link>
+                  {' or '}
+                  <Link href="/sign-up" style={{ fontWeight: 600 }}>create an account</Link>.
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        {searchParams.get('error') === 'auth_callback_failed' && (
+          <div style={{ marginBottom: '1.25rem' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleResendConfirmation}
+              disabled={resendLoading}
+              style={{ width: '100%' }}
+            >
+              {resendLoading ? 'Requesting link…' : 'Resend confirmation email'}
+            </button>
+            {resendMessage && (
+              <p role="status" style={{ marginTop: '0.75rem', color: 'var(--color-secondary-text)', fontSize: '0.8125rem' }}>
+                {resendMessage}
+              </p>
+            )}
           </div>
         )}
 
@@ -93,6 +192,23 @@ function SignInForm() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        {process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' && (
+          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={loading || demoLoading}
+              onClick={handleDemoSignIn}
+              style={{ width: '100%' }}
+            >
+              {demoLoading ? 'Opening demo…' : 'Sign in with demo account'}
+            </button>
+            <p style={{ margin: '0.5rem 0 0', textAlign: 'center', color: 'var(--color-secondary-text)', fontSize: '0.75rem' }}>
+              Local development only · caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com
+            </p>
+          </div>
+        )}
 
         <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.875rem', color: 'var(--color-secondary-text)' }}>
           Don&apos;t have an account?{' '}

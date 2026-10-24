@@ -14,12 +14,24 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const supabase = createClient()
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/api/auth/callback?next=/sign-in`,
-    })
-    if (resetError) { setError(resetError.message); setLoading(false); return }
-    setSent(true); setLoading(false)
+    try {
+      const supabase = createClient()
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=/reset-password`,
+      })
+      if (resetError) {
+        setError(resetError.message.toLowerCase().includes('rate limit')
+          ? 'Supabase has temporarily limited password-reset emails for this project. Please wait before trying again, or configure a custom SMTP provider in Supabase.'
+          : resetError.message)
+        return
+      }
+      setSent(true)
+    } catch (resetError) {
+      console.error('[Password Reset Error]', resetError)
+      setError('Unable to reach the password reset service. Check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (sent) {

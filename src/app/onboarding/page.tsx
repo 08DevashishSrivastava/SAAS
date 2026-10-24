@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 'use client'
 
@@ -44,63 +45,98 @@ export default function OnboardingPage() {
     setError('')
     setSaving(true)
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Session expired. Please sign in again.'); setSaving(false); return false }
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        setError('Session expired. Please sign in again.')
+        return false
+      }
 
-    // Create org if needed
-    let orgId: string
-    const { data: existingOrg } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('owner_user_id', user.id)
-      .limit(1)
-      .single()
-
-    if (existingOrg) {
-      orgId = existingOrg.id
-    } else {
-      const { data: newOrg, error: orgErr } = await supabase
+      const { data: existingOrg, error: orgLookupError } = await supabase
         .from('organizations')
-        .insert({ name: practiceData.name, owner_user_id: user.id })
-        .select()
-        .single()
-      if (orgErr || !newOrg) { setError('Failed to create organization'); setSaving(false); return false }
-      orgId = newOrg.id
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .limit(1)
+        .maybeSingle()
+      if (orgLookupError) throw orgLookupError
 
-      // Add owner as member
-      await supabase.from('organization_members').insert({ organization_id: orgId, user_id: user.id, role: 'owner' })
+      let orgId = existingOrg?.id
+      if (!orgId) {
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert({ name: practiceData.name.trim(), owner_user_id: user.id })
+          .select('id')
+          .single()
+        if (orgError) throw orgError
+        orgId = newOrg.id
+      }
 
-      // Create free subscription
-      await supabase.from('subscriptions').insert({ organization_id: orgId, plan: 'free', status: 'active' })
+      const { data: membership, error: membershipLookupError } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (membershipLookupError) throw membershipLookupError
+      if (!membership) {
+        const { error: membershipError } = await supabase
+          .from('organization_members')
+          .insert({ organization_id: orgId, user_id: user.id, role: 'owner' })
+        if (membershipError) throw membershipError
+      }
 
-      // Create profile
-      await supabase.from('profiles').upsert({ id: user.id, full_name: user.user_metadata?.full_name || '' })
-    }
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, full_name: user.user_metadata?.full_name || '' })
+      if (profileError) throw profileError
 
-    // Create or update practice
-    const { data: existingPractice } = await supabase
-      .from('practices')
-      .select('id')
-      .eq('organization_id', orgId)
-      .limit(1)
-      .single()
+      const { data: subscription, error: subscriptionLookupError } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('organization_id', orgId)
+        .maybeSingle()
+      if (subscriptionLookupError) throw subscriptionLookupError
+      if (!subscription) {
+        const { error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .insert({ organization_id: orgId, plan: 'free', status: 'active' })
+        if (subscriptionError) throw subscriptionError
+      }
 
-    if (existingPractice) {
-      await supabase.from('practices').update(practiceData).eq('id', existingPractice.id)
-      setPracticeId(existingPractice.id)
-    } else {
-      const { data: newPractice, error: practiceErr } = await supabase
+      const { data: existingPractice, error: practiceLookupError } = await supabase
         .from('practices')
-        .insert({ ...practiceData, organization_id: orgId, onboarding_completed: false })
-        .select()
-        .single()
-      if (practiceErr || !newPractice) { setError('Failed to create practice'); setSaving(false); return false }
-      setPracticeId(newPractice.id)
-    }
+        .select('id')
+        .eq('organization_id', orgId)
+        .limit(1)
+        .maybeSingle()
+      if (practiceLookupError) throw practiceLookupError
 
-    setSaving(false)
-    return true
+      if (existingPractice) {
+        const { error: updateError } = await supabase
+          .from('practices')
+          .update(practiceData)
+          .eq('id', existingPractice.id)
+        if (updateError) throw updateError
+        setPracticeId(existingPractice.id)
+      } else {
+        const { data: newPractice, error: practiceError } = await supabase
+          .from('practices')
+          .insert({ ...practiceData, organization_id: orgId, onboarding_completed: false })
+          .select('id')
+          .single()
+        if (practiceError) throw practiceError
+        setPracticeId(newPractice.id)
+      }
+
+      return true
+    } catch (saveError) {
+      console.error('[Onboarding Practice Setup Error]', saveError)
+      setError(saveError instanceof Error ? saveError.message : 'Could not save your practice setup. Please try again.')
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── Step 2: Save topics ──────────────────────────────────────────────────
@@ -109,11 +145,22 @@ export default function OnboardingPage() {
     setError('')
     if (!practiceId) return false
     setSaving(true)
-    const supabase = createClient()
-    const allTopics = [...topicsData.preferred_topics, ...topicsData.custom_topics]
-    await supabase.from('practices').update({ preferred_topics: allTopics }).eq('id', practiceId)
-    setSaving(false)
-    return true
+    try {
+      const supabase = createClient()
+      const allTopics = [...topicsData.preferred_topics, ...topicsData.custom_topics]
+      const { error: updateError } = await supabase
+        .from('practices')
+        .update({ preferred_topics: allTopics })
+        .eq('id', practiceId)
+      if (updateError) throw updateError
+      return true
+    } catch (saveError) {
+      console.error('[Onboarding Topics Error]', saveError)
+      setError(saveError instanceof Error ? saveError.message : 'Could not save your topics. Please try again.')
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── Step 3: Save tone ────────────────────────────────────────────────────
@@ -122,40 +169,77 @@ export default function OnboardingPage() {
     setError('')
     if (!practiceId) return false
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('practices').update({ preferred_tone: toneData.preferred_tone }).eq('id', practiceId)
-    setSaving(false)
-    return true
+    try {
+      const supabase = createClient()
+      const { error: updateError } = await supabase
+        .from('practices')
+        .update({ preferred_tone: toneData.preferred_tone })
+        .eq('id', practiceId)
+      if (updateError) throw updateError
+      return true
+    } catch (saveError) {
+      console.error('[Onboarding Tone Error]', saveError)
+      setError(saveError instanceof Error ? saveError.message : 'Could not save your writing tone. Please try again.')
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── Step 4: Add voice sample ─────────────────────────────────────────────
   async function addVoiceSample() {
     if (!newSample.content.trim() || !practiceId) return
     setSaving(true)
-    const supabase = createClient()
-    const { data } = await supabase.from('voice_samples')
-      .insert({ practice_id: practiceId, title: newSample.title || undefined, content: newSample.content, source_type: newSample.source_type })
-      .select().single()
-    if (data) setVoiceSamples(p => [...p, { ...data, title: data.title || '', source_type: data.source_type || '' }])
-    setNewSample({ title: '', content: '', source_type: 'instagram_caption' })
-    setSaving(false)
+    setError('')
+    try {
+      const supabase = createClient()
+      const { data, error: insertError } = await supabase.from('voice_samples')
+        .insert({ practice_id: practiceId, title: newSample.title || undefined, content: newSample.content, source_type: newSample.source_type })
+        .select().single()
+      if (insertError) throw insertError
+      setVoiceSamples(p => [...p, { ...data, title: data.title || '', source_type: data.source_type || '' }])
+      setNewSample({ title: '', content: '', source_type: 'instagram_caption' })
+    } catch (saveError) {
+      console.error('[Onboarding Voice Sample Error]', saveError)
+      setError(saveError instanceof Error ? saveError.message : 'Could not save this voice sample. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function deleteVoiceSample(id: string) {
-    const supabase = createClient()
-    await supabase.from('voice_samples').delete().eq('id', id)
-    setVoiceSamples(p => p.filter(s => s.id !== id))
+    setError('')
+    try {
+      const supabase = createClient()
+      const { error: deleteError } = await supabase.from('voice_samples').delete().eq('id', id)
+      if (deleteError) throw deleteError
+      setVoiceSamples(p => p.filter(s => s.id !== id))
+    } catch (saveError) {
+      console.error('[Onboarding Voice Sample Delete Error]', saveError)
+      setError(saveError instanceof Error ? saveError.message : 'Could not delete this voice sample.')
+    }
   }
 
   // ── Step 5: Finish ───────────────────────────────────────────────────────
   async function finishOnboarding() {
     if (!practiceId) return
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('practices').update({ onboarding_completed: true }).eq('id', practiceId)
-    setSaving(false)
-    router.push('/dashboard')
-    router.refresh()
+    setError('')
+    try {
+      const supabase = createClient()
+      const { error: updateError } = await supabase
+        .from('practices')
+        .update({ onboarding_completed: true })
+        .eq('id', practiceId)
+      if (updateError) throw updateError
+      router.push('/dashboard')
+      router.refresh()
+    } catch (saveError) {
+      console.error('[Onboarding Completion Error]', saveError)
+      setError(saveError instanceof Error ? saveError.message : 'Could not finish setup. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleNext() {

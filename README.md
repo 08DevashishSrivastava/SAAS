@@ -1,26 +1,96 @@
 # Caption AI
 
-Caption AI helps medical and dental practices turn everyday clinic updates, practice knowledge, and educational ideas into social media captions written in their voice.
+Caption AI is a full-stack social-content workspace for medical and dental practices. It helps a practice turn its profile, approved knowledge, and topic ideas into editable social captions, then organize drafts and scheduled content.
 
-The application is built with Next.js App Router, TypeScript, Supabase Auth/PostgreSQL, and the server-side OpenAI API. Authenticated dashboard routes and existing caption, draft, knowledge-bank, calendar, social-account, and billing features are retained.
+## Product capabilities
 
-## Features
+- Email/password authentication, confirmation callbacks, password recovery, and practice onboarding.
+- Practice-specific caption generation with selectable social platform, caption count, language, tone, length, and style options.
+- Saved drafts, editing, knowledge-bank notes, voice samples, social connections, scheduling, and billing pages.
+- A user-specific daily activity streak and year-long caption heatmap based on saved caption records.
+- Medical/dental topic ideas with safe curated suggestions when OpenAI is not configured.
+- Row Level Security (RLS) for Supabase-backed tenant data.
 
-- Practice onboarding, authenticated accounts, profile settings, and multi-tenant Supabase row-level security.
-- Practice-aware caption generation with writing-tone, voice-sample, platform, caption-count, and knowledge-bank context.
-- Editable saved drafts, a knowledge bank, content calendar, social-account connections, and scheduling integrations.
-- Dashboard analytics with per-user daily streak, best streak, total active days, and a year-long activity heatmap.
-- Daily topic suggestions tailored to the practice specialty, preferred topics, tone, and knowledge-bank notes, with curated medical/dental suggestions if OpenAI is unavailable.
-- Topic-to-caption workflow that opens the existing caption generator with the topic and discussion prompts pre-filled.
+## Technology
+
+| Area | Technology |
+| --- | --- |
+| Frontend and server rendering | Next.js App Router, React, TypeScript |
+| UI | React components, CSS design tokens, Lucide icons |
+| Authentication and data API | Supabase Auth, `@supabase/ssr`, Supabase JavaScript client |
+| Database | Supabase PostgreSQL with SQL migrations and RLS |
+| Request validation | Zod |
+| Caption and topic AI | Server-side OpenAI API |
+| Social publishing integration | Postiz client |
+| Tests | Node.js test runner for dashboard activity logic |
+
+## Application architecture
+
+### Frontend
+
+The frontend is in `src/app` and `src/components`. App Router pages are grouped by user journey:
+
+- `src/app/(marketing)/` — public product pages.
+- `src/app/(auth)/` — sign-in, sign-up, password reset, and confirmation flows.
+- `src/app/onboarding/` — practice profile, topic, tone, and voice setup.
+- `src/app/(dashboard)/dashboard/` — overview, caption generation, drafts, knowledge bank, calendar, social accounts, settings, and billing.
+- `src/components/dashboard/` — streak statistics, activity heatmap, and today's topic.
+- `src/components/layout/` — authenticated dashboard navigation and shell.
+
+The topic-to-caption workflow passes the selected title and discussion prompts into the existing caption form. Users choose the platform and number of captions before generating.
+
+### Backend and API
+
+Next.js Route Handlers in `src/app/api` implement the server-side API. They read the authenticated Supabase session, validate requests, query data through the user's Supabase client, and return consistent API responses.
+
+| Route group | Responsibility |
+| --- | --- |
+| `/api/auth/*` | PKCE/token-hash callback and development-only demo login |
+| `/api/practices` | List and create practices |
+| `/api/practices/[practiceId]/*` | Practice profile, captions, generation, notes, topics, media, social connections, and scheduled posts |
+| `/api/captions/[captionId]` | Read, edit, or delete a caption |
+| `/api/captions/[captionId]/schedule` | Schedule caption content |
+| `/api/notes/[noteId]` | Update or delete a knowledge-bank note |
+| `/api/dashboard/metrics` | Authenticated dashboard metrics |
+| `/api/scheduled-posts/[scheduledPostId]/cancel` | Cancel a scheduled post |
+
+`src/lib/supabase/server.ts` creates the cookie-aware server client. `src/lib/supabase/client.ts` creates the browser client using only the public publishable key. `src/lib/supabase/middleware.ts` refreshes sessions and protects authenticated routes. Never trust a browser-supplied user ID; use the authenticated session and database RLS.
+
+### AI services and models
+
+AI integrations live in `src/services/ai`:
+
+- `caption-generator.ts` builds a constrained prompt from the practice profile, writing samples, selected options, and relevant knowledge notes; it validates the generated result before drafts are saved.
+- `topic-generator.ts` requests a personalized practice topic, validates the output, and falls back to curated medical/dental topics when OpenAI is unavailable.
+- `OPENAI_MODEL` selects the server-side OpenAI model. The current default is `gpt-4o`.
+
+The AI provider is not the application's database model. AI output is stored as ordinary caption draft records in Supabase. A valid `OPENAI_API_KEY` is required for AI caption generation; curated topic suggestions do not require it.
+
+### Database model
+
+The canonical PostgreSQL schema is in `supabase/migrations`. `src/types/database.ts` contains generated TypeScript table definitions, while `src/types/index.ts` exports application-facing entity and API types.
+
+Core data entities include:
+
+- `profiles` — user profile data linked to Supabase Auth.
+- `organizations` and `organization_members` — tenant ownership and membership.
+- `practices` — practice specialty, tone, preferred topics, locale, and onboarding state.
+- `voice_samples` and `knowledge_notes` — practice-approved writing references and reusable facts.
+- `captions` — generated/saved content, status, platform, and generation metadata.
+- `media_assets`, `caption_media`, `social_connections`, and `social_accounts` — media and publishing integrations.
+- `scheduled_posts` and `scheduling_attempts` — publishing schedule and delivery tracking.
+- `subscriptions`, `usage_records`, and `audit_events` — plan, usage, and audit data.
+
+RLS policies scope records to the authenticated user’s organization/practice. Dashboard activity is derived from saved captions and the `caption_activity_by_day` database function; no random or synthetic activity is inserted.
 
 ## Requirements
 
-- Node.js 20 or newer. Use Node.js 26 or newer to run the included built-in Node test command.
-- npm.
-- A Supabase project with Auth and the project's PostgreSQL schema.
-- An OpenAI API key for AI-generated captions and personalized daily topics. Curated topic suggestions are used when AI topic generation is unavailable.
+- Node.js 20 or newer and npm.
+- A Supabase project with Auth enabled.
+- A valid OpenAI API key to generate captions and personalized topics (optional for curated topic fallback).
+- Postiz, OAuth, payment, or email-provider credentials only if you enable those integrations.
 
-## Local development
+## Run locally
 
 From the repository root:
 
@@ -29,85 +99,102 @@ npm install
 Copy-Item .env.example .env.local
 ```
 
-Configure the values in `.env.local`, then start Next.js:
+Set at least `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`. Add a valid `OPENAI_API_KEY` for caption generation. Then start the development server:
 
 ```powershell
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). To use a different port, run `npm run dev -- --port 3001` and allow the matching redirect URL in Supabase Auth settings.
+Open [http://localhost:3000](http://localhost:3000). For a production-mode local run:
+
+```powershell
+npm run build
+npm run start
+```
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` and configure the integrations you use:
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_APP_URL` | Yes | Canonical app URL used for auth redirects, e.g. `http://localhost:3000`. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Public Supabase key used by Auth and the PostgREST client. |
+| `OPENAI_API_KEY` | For AI captions | Server-side OpenAI credential. Never add a `NEXT_PUBLIC_` prefix. |
+| `OPENAI_MODEL` | No | OpenAI model identifier; defaults to `gpt-4o`. |
+| `SUPABASE_SECRET_KEY` | Integration-specific | Server-only elevated Supabase key. Avoid it unless a server operation explicitly requires it. |
+| `POSTIZ_API_BASE_URL` | Integration-specific | Postiz service base URL for social publishing. |
+| `APPLICATION_ENCRYPTION_KEY` | Integration-specific | 32-byte hex key for encrypting stored integration credentials. |
+| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Local demo only | Set to `true` to show the demo button in development. |
+| `SUPABASE_DEMO_EMAIL` | Local demo only | Email of a pre-provisioned demo Auth user. |
+| `SUPABASE_DEMO_PASSWORD` | Local demo only | Password of that demo Auth user; server-only. |
 
-| Variable | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_APP_URL` | Application URL used by authentication redirects. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable/anonymous key for the authenticated browser and server clients. |
-| `OPENAI_API_KEY` | Server-side OpenAI key for caption generation and personalized topic suggestions. |
-| `OPENAI_MODEL` | OpenAI model name; the code defaults to `gpt-4o`. |
-| `POSTIZ_API_BASE_URL` | Base URL for the Postiz scheduling integration. |
-| `SUPABASE_SECRET_KEY` | Optional server-only service key for integrations that explicitly require elevated access. Never expose it through `NEXT_PUBLIC_*` or client code. |
-| `APPLICATION_ENCRYPTION_KEY` | 32-byte hexadecimal key used to encrypt stored integration credentials. |
+Optional payment, OAuth, and email-provider variables are listed as examples in `.env.example`. Keep real credentials in an untracked `.env.local` or a deployment secret manager. Never commit service keys, database passwords, OpenAI keys, or demo passwords.
 
-Payment-provider, OAuth, and email variables in `.env.example` are optional and depend on the integration being configured. Do not commit `.env.local`, API keys, Supabase secrets, or database passwords.
+## Supabase setup
 
-### Supabase keys and database connections
+### Database migrations
 
-The Supabase project URL and publishable key are for Supabase Auth and the PostgREST API; they are **not** PostgreSQL database-login credentials. To use a desktop SQL client, choose a PostgreSQL driver and get the database host, port, database name, username, and database password from the Supabase Dashboard's **Connect** panel. A Microsoft SQL Server driver cannot connect to Supabase PostgreSQL.
+Apply migrations in order to the intended Supabase project:
 
-## Database migrations
+1. `supabase/migrations/001_initial_schema.sql` — core application tables, indexes, functions, and RLS policies.
+2. `supabase/migrations/002_dashboard_activity.sql` — caption activity index and timezone-aware daily activity function.
+3. `supabase/migrations/003_onboarding_access.sql` — owner recovery access for onboarding and restricted initial free-plan subscription creation.
 
-Apply the existing `supabase/migrations/001_initial_schema.sql` to initialize the application schema. Then apply `supabase/migrations/002_dashboard_activity.sql` to enable dashboard activity statistics.
+Use the Supabase Dashboard **SQL Editor** for projects whose migration history is not managed by the local CLI. Use `npx supabase db push` only after linking the correct project and checking that local and remote migration histories are synchronized.
 
-In the Supabase Dashboard, select the project's **SQL Editor**, paste the contents of the migration that has not yet been applied, and run it. The dashboard migration:
+### Authentication URLs and email
 
-- Adds an index for user/practice/date filtering on saved caption drafts.
-- Adds `caption_activity_by_day`, a security-invoker PostgreSQL function that groups a user's saved captions by date in the practice time zone.
-- Uses the existing `captions` table and its `created_by` identity; it does not add a duplicate caption table or activity-event store.
+For local development, set the Supabase Auth **Site URL** to `http://localhost:3000` and allow `http://localhost:3000/api/auth/callback` in the redirect URL configuration. For another host or port, add its callback URL too.
 
-If the local Supabase CLI migration history is already synchronized with the remote project, migrations may instead be applied with:
+New accounts use email confirmation. Supabase's default email sender is rate-limited; configure a verified custom SMTP provider in **Authentication → Emails → SMTP Settings** for reliable delivery. The auth callback supports both PKCE codes and token-hash confirmation links. If a confirmation link has expired or was already used, request a fresh confirmation email and use the newest link. Do not disable confirmation on a shared or production project to bypass email limits.
 
-```powershell
-npx supabase db push
-```
+### Development demo account
 
-Do not use this command against a production database until you have linked and verified the intended Supabase project and migration history.
+The optional demo button and `/api/auth/demo-login` endpoint are restricted to `NODE_ENV=development` and `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`. Configure the demo email and password only in `.env.local`, and create/confirm the matching Auth user in Supabase before use. The demo account should have its own isolated organization and practice. Do not put demo credentials in this README, source code, or GitHub.
 
-## Dashboard activity and topics
+## Validation
 
-A successfully generated caption is saved as a draft by the existing server-side caption generation route. Activity is derived from those saved draft records. Each heatmap cell shows the number of captions saved by the signed-in user on that local calendar date; multiple captions on one date count as a single active day for streak calculations. The current streak continues if today **or yesterday** is active, and ends after a missed day. The configured practice time zone is used for date boundaries and year transitions.
-
-Daily topic suggestions use the authenticated practice's name, practice type, specialties, preferred writing tone and topics, and recent active knowledge-bank notes. Generated suggestions are validated and fall back to curated medical/dental topics when necessary. Topic prompts are passed to the existing caption generator; the normal platform and caption-count controls remain available, generated drafts can be edited, and edits can be saved.
-
-## Validation and production
-
-Run the focused dashboard-logic tests:
+Run the focused streak and heatmap unit tests:
 
 ```powershell
 node --test tests/unit/streaks.test.mts
 ```
 
-Run lint and the production build:
+Run lint, type-check, and production build:
 
 ```powershell
 npm run lint
+npx tsc --noEmit
 npm run build
-npm run start
 ```
 
-The focused tests cover same-day deduplication, today/yesterday/missed-day streak behavior, year transitions, time-zone-local dates, leap days, heatmap positioning and month labels, intensity levels, and medical/dental fallback topics.
+The activity tests cover same-day de-duplication, today/yesterday/missed-day streaks, year boundaries, timezone-local dates, leap days, heatmap positions and labels, intensity levels, and curated medical/dental topic fallback.
 
-## Project structure
+## Repository map
 
 ```text
-src/app/(dashboard)/dashboard/   Authenticated dashboard pages
-src/app/api/                     Authenticated API routes
-src/components/dashboard/        Reusable dashboard feature components
-src/lib/dashboard/               Activity streak and heatmap calculations
-src/services/ai/                 Server-side AI caption and topic services
-supabase/migrations/             PostgreSQL schema and migrations
-tests/unit/                      Focused unit tests
+src/
+  app/
+    (auth)/                     Sign-in, sign-up, confirmation and password recovery
+    (dashboard)/                Authenticated dashboard layout and product pages
+    (marketing)/                 Public marketing pages
+    api/                         Next.js Route Handler API
+    onboarding/                  Practice onboarding flow
+  components/
+    dashboard/                   Reusable streak, heatmap and topic UI
+    layout/                      Dashboard navigation shell
+  config/                        Product options and shared configuration
+  lib/
+    dashboard/                   Streak and heatmap calculations
+    security/                    API responses and credential encryption
+    supabase/                    Browser, server, middleware and dashboard clients
+    validation/                  Zod request schemas
+  services/
+    ai/                          Caption and topic generation
+    postiz/                       Social publishing client
+  types/                          Database-generated and domain/API types
+supabase/
+  migrations/                     PostgreSQL schema changes and RLS policies
+tests/
+  unit/                           Activity logic tests
 ```

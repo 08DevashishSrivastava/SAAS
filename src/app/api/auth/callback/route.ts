@@ -1,21 +1,42 @@
-// @ts-nocheck
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const code = url.searchParams.get('code')
-  const next = url.searchParams.get('next') || '/dashboard'
+  const tokenHash = url.searchParams.get('token_hash')
+  const otpType = url.searchParams.get('type')
+  const requestedNext = url.searchParams.get('next')
+  const next = requestedNext && [
+    '/dashboard',
+    '/onboarding',
+    '/reset-password',
+    '/sign-in',
+  ].includes(requestedNext) ? requestedNext : '/dashboard'
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      return NextResponse.redirect(`${appUrl}${next}`)
+  if (code || (tokenHash && ['signup', 'email', 'recovery'].includes(otpType ?? ''))) {
+    try {
+      const supabase = await createClient()
+      let authError
+      if (code) {
+        const result = await supabase.auth.exchangeCodeForSession(code)
+        authError = result.error
+      } else if (tokenHash && (otpType === 'signup' || otpType === 'email' || otpType === 'recovery')) {
+        const result = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType })
+        authError = result.error
+      }
+
+      if (!authError) {
+        return NextResponse.redirect(new URL(next, appUrl))
+      }
+      console.error('[Auth Callback Error]', authError.message)
+    } catch (error) {
+      console.error('[Auth Callback Error]', error)
     }
   }
 
-  return NextResponse.redirect(`${appUrl}/sign-in?error=auth_callback_failed`)
+  const signInUrl = new URL('/sign-in', appUrl)
+  signInUrl.searchParams.set('error', 'auth_callback_failed')
+  return NextResponse.redirect(signInUrl)
 }
-

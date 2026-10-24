@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function SignUpPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -16,11 +14,13 @@ export default function SignUpPage() {
     e.preventDefault()
     setError('')
 
-    if (!form.full_name.trim() || form.full_name.length < 2) {
+    const fullName = form.full_name.trim().replace(/\s+/g, ' ')
+    if (fullName.length < 2) {
       setError('Please enter your full name (at least 2 characters).')
       return
     }
-    if (!form.email.includes('@')) {
+    const email = form.email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Please enter a valid email address.')
       return
     }
@@ -30,25 +30,31 @@ export default function SignUpPage() {
     }
 
     setLoading(true)
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: form.password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
+        },
+      })
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: { full_name: form.full_name },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
-      },
-    })
+      if (signUpError) {
+        setError(signUpError.message.toLowerCase().includes('rate limit')
+          ? 'Your full name is valid, but Supabase has temporarily limited confirmation emails for this project. No account was created. Please wait before trying again, or configure a custom SMTP provider in Supabase Auth.'
+          : signUpError.message)
+        return
+      }
 
-    if (signUpError) {
-      setError(signUpError.message)
+      setSuccess(true)
+    } catch (signUpError) {
+      console.error('[Sign Up Error]', signUpError)
+      setError('Unable to reach the account service. Check your connection and try again.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setSuccess(true)
-    setLoading(false)
   }
 
   if (success) {
@@ -88,7 +94,7 @@ export default function SignUpPage() {
         </p>
 
         {error && (
-          <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>
+          <div className="alert alert-error" role="alert" style={{ marginBottom: '1.25rem' }}>
             <span>⚠</span> {error}
           </div>
         )}
@@ -104,6 +110,8 @@ export default function SignUpPage() {
               value={form.full_name}
               onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
               autoComplete="name"
+              minLength={2}
+              maxLength={120}
               required
             />
           </div>

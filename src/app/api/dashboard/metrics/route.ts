@@ -1,9 +1,10 @@
-// @ts-nocheck
-import { NextRequest } from 'next/server'
+import { connection, NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/security/api-response'
 
 export async function GET(req: NextRequest) {
+  await connection()
+
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -44,9 +45,20 @@ export async function GET(req: NextRequest) {
       recent_notes: recentNotes || [],
       recent_captions: recentCaptions || [],
       upcoming_posts: upcomingPosts || [],
-      social_connection_status: socialConnection?.connection_status || null,
+      social_connection_status: getConnectionStatus(socialConnection),
     })
   } catch (error) {
     return serverErrorResponse(error, 'dashboard metrics')
   }
+}
+
+function getConnectionStatus(value: unknown): 'active' | 'inactive' | 'error' | null {
+  if (!value || typeof value !== 'object' || !('connection_status' in value)) {
+    return null
+  }
+
+  const status = value.connection_status
+  return status === 'active' || status === 'inactive' || status === 'error'
+    ? status
+    : null
 }
