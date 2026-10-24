@@ -1,46 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Caption AI
 
-## Getting Started
+Caption AI helps medical and dental practices turn everyday clinic updates, practice knowledge, and educational ideas into social media captions written in their voice.
 
-First, run the development server:
+The application is built with Next.js App Router, TypeScript, Supabase Auth/PostgreSQL, and the server-side OpenAI API. Authenticated dashboard routes and existing caption, draft, knowledge-bank, calendar, social-account, and billing features are retained.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- Practice onboarding, authenticated accounts, profile settings, and multi-tenant Supabase row-level security.
+- Practice-aware caption generation with writing-tone, voice-sample, platform, caption-count, and knowledge-bank context.
+- Editable saved drafts, a knowledge bank, content calendar, social-account connections, and scheduling integrations.
+- Dashboard analytics with per-user daily streak, best streak, total active days, and a year-long activity heatmap.
+- Daily topic suggestions tailored to the practice specialty, preferred topics, tone, and knowledge-bank notes, with curated medical/dental suggestions if OpenAI is unavailable.
+- Topic-to-caption workflow that opens the existing caption generator with the topic and discussion prompts pre-filled.
+
+## Requirements
+
+- Node.js 20 or newer. Use Node.js 26 or newer to run the included built-in Node test command.
+- npm.
+- A Supabase project with Auth and the project's PostgreSQL schema.
+- An OpenAI API key for AI-generated captions and personalized daily topics. Curated topic suggestions are used when AI topic generation is unavailable.
+
+## Local development
+
+From the repository root:
+
+```powershell
+npm install
+Copy-Item .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Configure the values in `.env.local`, then start Next.js:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000). To use a different port, run `npm run dev -- --port 3001` and allow the matching redirect URL in Supabase Auth settings.
 
-## Learn More
+## Environment variables
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` to `.env.local` and configure the integrations you use:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_APP_URL` | Application URL used by authentication redirects. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable/anonymous key for the authenticated browser and server clients. |
+| `OPENAI_API_KEY` | Server-side OpenAI key for caption generation and personalized topic suggestions. |
+| `OPENAI_MODEL` | OpenAI model name; the code defaults to `gpt-4o`. |
+| `POSTIZ_API_BASE_URL` | Base URL for the Postiz scheduling integration. |
+| `SUPABASE_SECRET_KEY` | Optional server-only service key for integrations that explicitly require elevated access. Never expose it through `NEXT_PUBLIC_*` or client code. |
+| `APPLICATION_ENCRYPTION_KEY` | 32-byte hexadecimal key used to encrypt stored integration credentials. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Payment-provider, OAuth, and email variables in `.env.example` are optional and depend on the integration being configured. Do not commit `.env.local`, API keys, Supabase secrets, or database passwords.
 
-## Deploy on Vercel
+### Supabase keys and database connections
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The Supabase project URL and publishable key are for Supabase Auth and the PostgREST API; they are **not** PostgreSQL database-login credentials. To use a desktop SQL client, choose a PostgreSQL driver and get the database host, port, database name, username, and database password from the Supabase Dashboard's **Connect** panel. A Microsoft SQL Server driver cannot connect to Supabase PostgreSQL.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Database migrations
 
-## Dashboard activity and topic suggestions
+Apply the existing `supabase/migrations/001_initial_schema.sql` to initialize the application schema. Then apply `supabase/migrations/002_dashboard_activity.sql` to enable dashboard activity statistics.
 
-The dashboard shows daily, best, and total saved-caption streaks and a year-long activity heatmap. Activity is derived from the existing `captions` table and grouped by the practice's configured time zone. A saved draft is attributed to its authenticated `created_by` user, and multiple drafts on one date count as one streak day.
+In the Supabase Dashboard, select the project's **SQL Editor**, paste the contents of the migration that has not yet been applied, and run it. The dashboard migration:
 
-Apply `supabase/migrations/002_dashboard_activity.sql` to the Supabase project after the initial schema. In the Supabase Dashboard, open **SQL Editor**, paste the migration, and run it. The migration adds an index and a security-invoker activity function; it does not create duplicate caption or activity tables. It can also be applied with `npx supabase db push` if the project's existing migration history is already synchronized with the remote database.
+- Adds an index for user/practice/date filtering on saved caption drafts.
+- Adds `caption_activity_by_day`, a security-invoker PostgreSQL function that groups a user's saved captions by date in the practice time zone.
+- Uses the existing `captions` table and its `created_by` identity; it does not add a duplicate caption table or activity-event store.
 
-The topic suggestion uses the practice profile and recent knowledge-bank notes through the server-side OpenAI integration. If OpenAI is unavailable or returns invalid content, a specialty-aware curated suggestion is used instead. The topic card links into the existing caption generator with the topic and discussion prompts prefilled; the existing caption API generates and saves drafts, and edits can be saved back to those drafts.
+If the local Supabase CLI migration history is already synchronized with the remote project, migrations may instead be applied with:
 
-Run the focused streak, time-zone, heatmap, and topic tests with `node --test tests/unit/streaks.test.mts` on Node.js 26 or later. Run `npm run lint` and `npm run build` for project validation.
+```powershell
+npx supabase db push
+```
+
+Do not use this command against a production database until you have linked and verified the intended Supabase project and migration history.
+
+## Dashboard activity and topics
+
+A successfully generated caption is saved as a draft by the existing server-side caption generation route. Activity is derived from those saved draft records. Each heatmap cell shows the number of captions saved by the signed-in user on that local calendar date; multiple captions on one date count as a single active day for streak calculations. The current streak continues if today **or yesterday** is active, and ends after a missed day. The configured practice time zone is used for date boundaries and year transitions.
+
+Daily topic suggestions use the authenticated practice's name, practice type, specialties, preferred writing tone and topics, and recent active knowledge-bank notes. Generated suggestions are validated and fall back to curated medical/dental topics when necessary. Topic prompts are passed to the existing caption generator; the normal platform and caption-count controls remain available, generated drafts can be edited, and edits can be saved.
+
+## Validation and production
+
+Run the focused dashboard-logic tests:
+
+```powershell
+node --test tests/unit/streaks.test.mts
+```
+
+Run lint and the production build:
+
+```powershell
+npm run lint
+npm run build
+npm run start
+```
+
+The focused tests cover same-day deduplication, today/yesterday/missed-day streak behavior, year transitions, time-zone-local dates, leap days, heatmap positioning and month labels, intensity levels, and medical/dental fallback topics.
+
+## Project structure
+
+```text
+src/app/(dashboard)/dashboard/   Authenticated dashboard pages
+src/app/api/                     Authenticated API routes
+src/components/dashboard/        Reusable dashboard feature components
+src/lib/dashboard/               Activity streak and heatmap calculations
+src/services/ai/                 Server-side AI caption and topic services
+supabase/migrations/             PostgreSQL schema and migrations
+tests/unit/                      Focused unit tests
+```
