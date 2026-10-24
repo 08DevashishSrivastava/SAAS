@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import type { Metadata } from 'next'
+import { useEffect, useState } from 'react'
 import { CAPTION_PLATFORMS, CAPTION_COUNTS, CAPTION_LENGTHS, EMOJI_PREFERENCES, HASHTAG_PREFERENCES } from '@/config'
 import type { Caption } from '@/types'
 
@@ -33,6 +32,30 @@ export default function CaptionsPage() {
   const [error, setError] = useState('')
   const [captions, setCaptions] = useState<Caption[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [editingCaptionId, setEditingCaptionId] = useState<string | null>(null)
+  const [editedBody, setEditedBody] = useState('')
+  const [savingCaption, setSavingCaption] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const topic = params.get('topic')
+    const prompts = params.get('prompts')
+
+    if (!topic) return
+
+    const timeout = window.setTimeout(() => {
+      setForm((current) => ({
+        ...current,
+        topic: topic.slice(0, 500),
+        additional_instructions: prompts
+          ? `Please address these discussion points:\n${prompts.slice(0, 1000)}`
+          : current.additional_instructions,
+      }))
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
+  }, [])
 
   async function getPracticeId(): Promise<string | null> {
     const res = await fetch('/api/practices')
@@ -47,28 +70,31 @@ export default function CaptionsPage() {
     setLoading(true)
     setCaptions([])
 
-    const practiceId = await getPracticeId()
-    if (!practiceId) {
-      setError('No practice found. Please complete onboarding first.')
+    try {
+      const practiceId = await getPracticeId()
+      if (!practiceId) {
+        setError('No practice found. Please complete onboarding first.')
+        return
+      }
+
+      const res = await fetch(`/api/practices/${practiceId}/captions/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.error || 'Failed to generate captions. Please try again.')
+        return
+      }
+
+      setCaptions(json.data?.captions || [])
+    } catch {
+      setError('Unable to reach the caption service. Please try again.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    const res = await fetch(`/api/practices/${practiceId}/captions/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-
-    const json = await res.json()
-    if (!res.ok) {
-      setError(json.error || 'Failed to generate captions. Please try again.')
-      setLoading(false)
-      return
-    }
-
-    setCaptions(json.data?.captions || [])
-    setLoading(false)
   }
 
   async function copyCaption(cap: Caption) {
@@ -76,6 +102,33 @@ export default function CaptionsPage() {
     await navigator.clipboard.writeText(text)
     setCopiedId(cap.id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  async function saveCaption(cap: Caption) {
+    setSavingCaption(true)
+    setError('')
+    setSaveMessage('')
+
+    try {
+      const response = await fetch(`/api/captions/${cap.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: editedBody }),
+      })
+      const result = await response.json()
+
+      if (!response.ok || !result.data) {
+        throw new Error(result.error || 'Unable to save your caption changes.')
+      }
+
+      setCaptions((current) => current.map((item) => item.id === cap.id ? result.data : item))
+      setEditingCaptionId(null)
+      setSaveMessage('Caption changes saved to your drafts.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save your caption changes.')
+    } finally {
+      setSavingCaption(false)
+    }
   }
 
   return (
@@ -257,9 +310,21 @@ export default function CaptionsPage() {
                     </p>
                   )}
 
-                  <p className="prose-caption" style={{ marginBottom: cap.call_to_action || (cap.hashtags && cap.hashtags.length > 0) ? '0.875rem' : 0 }}>
-                    {cap.body}
-                  </p>
+                  {editingCaptionId === cap.id ? (
+                    <textarea
+                      className="input"
+                      aria-label={`Edit caption ${i + 1}`}
+                      value={editedBody}
+                      onChange={(event) => setEditedBody(event.target.value)}
+                      rows={7}
+                      maxLength={10000}
+                      style={{ width: '100%', resize: 'vertical' }}
+                    />
+                  ) : (
+                    <p className="prose-caption" style={{ marginBottom: cap.call_to_action || (cap.hashtags && cap.hashtags.length > 0) ? '0.875rem' : 0 }}>
+                      {cap.body}
+                    </p>
+                  )}
 
                   {cap.call_to_action && (
                     <p style={{ fontStyle: 'italic', color: 'var(--color-secondary-text)', marginBottom: cap.hashtags && cap.hashtags.length > 0 ? '0.625rem' : 0, fontSize: '0.9rem' }}>
@@ -280,12 +345,34 @@ export default function CaptionsPage() {
                     >
                       {copiedId === cap.id ? '✓ Copied!' : '📋 Copy'}
                     </button>
+                    {editingCaptionId === cap.id ? (
+                      <>
+                        <button className="btn btn-primary btn-sm" onClick={() => saveCaption(cap)} disabled={savingCaption || !editedBody.trim()}>
+                          {savingCaption ? 'Saving…' : 'Save changes'}
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditingCaptionId(null)} disabled={savingCaption}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          setEditingCaptionId(cap.id)
+                          setEditedBody(cap.body)
+                          setSaveMessage('')
+                        }}
+                      >
+                        ✏️ Edit draft
+                      </button>
+                    )}
                     <a href={`/dashboard/drafts`} className="btn btn-secondary btn-sm">
                       📄 View in Drafts
                     </a>
                   </div>
                 </div>
               ))}
+              {saveMessage && <div className="alert alert-success" role="status">{saveMessage}</div>}
             </div>
           )}
         </div>

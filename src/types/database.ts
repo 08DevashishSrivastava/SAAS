@@ -580,6 +580,10 @@ export interface Database {
     }
     Views: Record<string, never>
     Functions: {
+      caption_activity_by_day: {
+        Args: { p_practice_id: string; p_timezone?: string }
+        Returns: { activity_date: string; caption_count: number }[]
+      }
       is_org_member: {
         Args: { org_id: string; uid: string }
         Returns: boolean

@@ -1,7 +1,17 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import StreakStats from '@/components/dashboard/streak-stats'
+import ActivityHeatmap from '@/components/dashboard/activity-heatmap'
+import TodaysTopic from '@/components/dashboard/todays-topic'
+import {
+  getActivityStats,
+  getDateKeyInTimeZone,
+  type DailyActivity,
+} from '@/lib/dashboard/streaks'
+import { generatePracticeTopic } from '@/services/ai/topic-generator'
 
 export const metadata: Metadata = { title: 'Dashboard Overview — Caption AI' }
 
@@ -11,7 +21,7 @@ export default async function DashboardPage() {
 
   const { data: practice } = await supabase
     .from('practices')
-    .select('id, name, practice_type')
+    .select('id, name, practice_type, specialties, preferred_tone, preferred_topics, timezone')
     .limit(1)
     .single()
 
@@ -25,6 +35,7 @@ export default async function DashboardPage() {
     { data: recentCaptions },
     { data: recentNotes },
     { data: socialConn },
+    { data: activityRows, error: activityError },
   ] = await Promise.all([
     supabase.from('captions').select('*', { count: 'exact', head: true }).eq('practice_id', practiceId || ''),
     supabase.from('captions').select('*', { count: 'exact', head: true }).eq('practice_id', practiceId || '').eq('status', 'draft'),
@@ -33,7 +44,33 @@ export default async function DashboardPage() {
     supabase.from('captions').select('*').eq('practice_id', practiceId || '').order('created_at', { ascending: false }).limit(4),
     supabase.from('knowledge_notes').select('*').eq('practice_id', practiceId || '').is('archived_at', null).order('created_at', { ascending: false }).limit(3),
     supabase.from('social_connections').select('connection_status').eq('practice_id', practiceId || '').limit(1).single(),
+    practiceId
+      ? supabase.rpc('caption_activity_by_day', {
+          p_practice_id: practiceId,
+          p_timezone: practice?.timezone || 'UTC',
+        })
+      : Promise.resolve({ data: [], error: null }),
   ])
+
+  if (activityError) console.error('[Dashboard Activity Error]', activityError.message)
+  const activity: DailyActivity[] = (activityRows ?? []).map((row) => ({
+    date: row.activity_date,
+    count: Number(row.caption_count),
+  }))
+  const timeZone = practice?.timezone || 'UTC'
+  const stats = getActivityStats(activity, getDateKeyInTimeZone(new Date(), timeZone))
+  const todayTopic = await generatePracticeTopic({
+    name: practice?.name || 'Healthcare practice',
+    practiceType: practice?.practice_type || null,
+    specialties: practice?.specialties || null,
+    tone: practice?.preferred_tone || null,
+    preferredTopics: practice?.preferred_topics || null,
+    notes: (recentNotes ?? []).map((note) => ({
+      title: note.title,
+      content: note.content,
+      category: note.category,
+    })),
+  })
 
   const metrics = [
     { label: 'Total Captions', value: totalCaptions || 0, icon: '✨', color: 'var(--color-lavender)' },
@@ -69,6 +106,19 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+
+      <section className="dashboard-activity">
+        <div className="dashboard-activity-title">
+          <div>
+            <span className="dashboard-activity-eyebrow">CONSISTENCY COUNTS</span>
+            <h2>Your caption streak</h2>
+          </div>
+          {activityError && <p role="status">Activity is unavailable right now.</p>}
+        </div>
+        <StreakStats stats={stats} />
+        <ActivityHeatmap activity={activity} timeZone={timeZone} />
+        {practiceId && <TodaysTopic practiceId={practiceId} initialTopic={todayTopic} />}
+      </section>
 
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
