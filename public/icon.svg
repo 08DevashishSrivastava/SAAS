@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="bubble" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="sparkle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <!-- Speech Bubble -->
+  <path d="M140 180 C140 135.8 175.8 100 220 100 L320 100 C364.2 100 400 135.8 400 180 L400 260 C400 304.2 364.2 340 320 340 L240 340 L170 395 C161 402 148 395.5 148 384 L148 340 C143.5 340 140 336.5 140 332 Z" fill="url(#bubble)" />
+  <!-- AI Sparkle -->
+  <path d="M270 170 Q270 210 310 210 Q270 210 270 250 Q270 210 230 210 Q270 210 270 170 Z" fill="url(#sparkle)" />
+  <circle cx="215" cy="180" r="8" fill="#ffffff" opacity="0.9" />
+  <circle cx="325" cy="240" r="10" fill="#ffffff" opacity="0.9" />
+</svg>

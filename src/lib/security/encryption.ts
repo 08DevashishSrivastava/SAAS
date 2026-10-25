@@ -1,7 +1,6 @@
 import crypto from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
-const KEY_LENGTH = 32 // bytes
 const IV_LENGTH = 12 // bytes for GCM
 const TAG_LENGTH = 16 // bytes for GCM auth tag
 

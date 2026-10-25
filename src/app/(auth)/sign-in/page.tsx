@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 function SignInForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const requestedRedirect = searchParams.get('redirect')
   const redirectTo = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
@@ -32,8 +31,8 @@ function SignInForm() {
       if (!response.ok) {
         throw new Error(result.error || 'Demo sign-in is unavailable.')
       }
-      router.replace(redirectTo)
-      router.refresh()
+      // Force full page navigation to ensure cookies are sent with SSR requests on mobile WebViews
+      window.location.href = redirectTo
     } catch (demoError) {
       console.error('[Demo Sign In Error]', demoError)
       setError(demoError instanceof Error ? demoError.message : 'Unable to sign in to the demo account.')
@@ -97,8 +96,7 @@ function SignInForm() {
         return
       }
 
-      router.replace(redirectTo)
-      router.refresh()
+      window.location.href = redirectTo
     } catch (signInError) {
       console.error('[Sign In Error]', signInError)
       setError('Unable to reach the sign-in service. Check your connection and try again.')
@@ -118,9 +116,52 @@ function SignInForm() {
 
       <div className="card auth-card">
         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.375rem' }}>Welcome back</h1>
-        <p style={{ color: 'var(--color-secondary-text)', fontSize: '0.9375rem', marginBottom: '1.75rem' }}>
+        <p style={{ color: 'var(--color-secondary-text)', fontSize: '0.9375rem', marginBottom: '1.25rem' }}>
           Sign in to your Caption AI account
         </p>
+
+        {/* ─── Instant Demo Access Box ──────────────────────────────────── */}
+        <div style={{
+          background: 'var(--color-mint)',
+          border: '1.5px solid var(--color-primary-light)',
+          padding: '1.125rem',
+          borderRadius: '14px',
+          marginBottom: '1.5rem',
+          textAlign: 'left',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-forest)', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              ⚡ Instant Demo Access
+            </span>
+            <span className="badge badge-mint" style={{ fontSize: '0.6875rem', fontWeight: 600 }}>No Password Required</span>
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--color-secondary-text)', margin: '0 0 0.875rem', lineHeight: 1.5 }}>
+            Open the live dashboard with pre-loaded dental &amp; medical practice data.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={loading || demoLoading}
+            onClick={handleDemoSignIn}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+          >
+            {demoLoading ? 'Opening Demo Dashboard…' : '⚡ Enter Live Demo Account'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm({
+              email: 'caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com',
+              password: 'CaptionDemo_rhtjqxicgwrnghxmwpmi_2026!',
+            })}
+            style={{
+              background: 'none', border: 'none', color: 'var(--color-primary)',
+              fontSize: '0.75rem', cursor: 'pointer', marginTop: '0.625rem',
+              textDecoration: 'underline', width: '100%', textAlign: 'center',
+            }}
+          >
+            Or click here to autofill demo email &amp; password below
+          </button>
+        </div>
 
         {error && (
           <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>

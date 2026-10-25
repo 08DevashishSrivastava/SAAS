@@ -1,8 +1,14 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { successResponse, unauthorizedResponse, notFoundResponse, serverErrorResponse } from '@/lib/security/api-response'
+import {
+  successResponse,
+  unauthorizedResponse,
+  notFoundResponse,
+  validationErrorResponse,
+  serverErrorResponse,
+} from '@/lib/security/api-response'
 import { practiceProfileSchema } from '@/lib/validation/schemas'
+import type { Database } from '@/types/database'
 
 export async function GET(
   _req: NextRequest,
@@ -14,7 +20,12 @@ export async function GET(
     if (!user) return unauthorizedResponse()
 
     const { practiceId } = await params
-    const { data, error } = await supabase.from('practices').select('*').eq('id', practiceId).single()
+    const { data, error } = await supabase
+      .from('practices')
+      .select('*')
+      .eq('id', practiceId)
+      .maybeSingle()
+
     if (error || !data) return notFoundResponse('Practice')
     return successResponse(data)
   } catch (error) {
@@ -35,14 +46,29 @@ export async function PATCH(
     const body = await req.json().catch(() => null)
 
     const parsed = practiceProfileSchema.partial().safeParse(body || {})
-    if (!parsed.success) return successResponse({ error: parsed.error.message }, 422)
+    if (!parsed.success) return validationErrorResponse(parsed.error.message)
+
+    const updatePayload: Database['public']['Tables']['practices']['Update'] = {
+      name: parsed.data.name,
+      practice_type: parsed.data.practice_type,
+      specialties: parsed.data.specialties,
+      city: parsed.data.city,
+      region: parsed.data.region,
+      country: parsed.data.country,
+      website: parsed.data.website !== undefined ? parsed.data.website || null : undefined,
+      contact_email: parsed.data.contact_email !== undefined ? parsed.data.contact_email || null : undefined,
+      contact_phone: parsed.data.contact_phone,
+      target_audience: parsed.data.target_audience,
+      preferred_language: parsed.data.preferred_language,
+      timezone: parsed.data.timezone,
+    }
 
     const { data, error } = await supabase
       .from('practices')
-      .update(parsed.data)
+      .update(updatePayload)
       .eq('id', practiceId)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error || !data) return notFoundResponse('Practice')
     return successResponse(data)

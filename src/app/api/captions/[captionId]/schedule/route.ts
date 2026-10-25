@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -9,6 +8,8 @@ import { schedulePostSchema } from '@/lib/validation/schemas'
 import { decrypt } from '@/lib/security/encryption'
 import { schedulePostizPost } from '@/services/postiz/postiz-client'
 import crypto from 'crypto'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, Json } from '@/types/database'
 
 export async function POST(
   req: NextRequest,
@@ -27,7 +28,7 @@ export async function POST(
 
     const parsed = schedulePostSchema.safeParse({ ...body, caption_id: captionId })
     if (!parsed.success) {
-      return validationErrorResponse(parsed.error.errors.map(e => e.message).join(', '))
+      return validationErrorResponse(parsed.error.issues.map(e => e.message).join(', '))
     }
 
     const { social_account_id, scheduled_at, timezone, media_asset_id } = parsed.data
@@ -37,7 +38,7 @@ export async function POST(
       .from('captions')
       .select('*')
       .eq('id', captionId)
-      .single()
+      .maybeSingle()
 
     if (captionError || !caption) return notFoundResponse('Caption')
     if (!['draft', 'failed'].includes(caption.status)) {
@@ -52,7 +53,7 @@ export async function POST(
         social_connections(encrypted_credential, connection_status, practice_id)
       `)
       .eq('id', social_account_id)
-      .single()
+      .maybeSingle()
 
     if (accountError || !socialAccount) return notFoundResponse('Social account')
 
@@ -81,7 +82,7 @@ export async function POST(
         .from('media_assets')
         .select('storage_path, practice_id')
         .eq('id', media_asset_id)
-        .single()
+        .maybeSingle()
 
       if (!media || media.practice_id !== caption.practice_id) {
         return notFoundResponse('Media asset')
@@ -121,7 +122,6 @@ export async function POST(
     const requestReference = crypto.randomUUID()
     const attemptNumber = 1
 
-    // Create attempt record
     await supabase.from('scheduling_attempts').insert({
       scheduled_post_id: scheduledPost.id,
       request_reference: requestReference,
@@ -182,7 +182,7 @@ export async function POST(
 
       await supabase.from('scheduling_attempts').update({
         status: 'failed',
-        safe_error_metadata: { code: 'POSTIZ_ERROR', message: 'Provider rejected the request' },
+        safe_error_metadata: { code: 'POSTIZ_ERROR', message: 'Provider rejected the request' } as unknown as Json,
       }).eq('scheduled_post_id', scheduledPost.id)
         .eq('attempt_number', attemptNumber)
 
@@ -198,8 +198,7 @@ export async function POST(
 }
 
 async function revertSchedulingFailure(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   scheduledPostId: string,
   captionId: string,
   errorCode: string,

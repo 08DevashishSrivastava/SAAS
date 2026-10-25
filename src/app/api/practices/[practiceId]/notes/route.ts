@@ -1,14 +1,16 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
-  successResponse, unauthorizedResponse, notFoundResponse,
-  serverErrorResponse, validationErrorResponse
+  successResponse,
+  unauthorizedResponse,
+  notFoundResponse,
+  serverErrorResponse,
+  validationErrorResponse,
 } from '@/lib/security/api-response'
 import { knowledgeNoteSchema } from '@/lib/validation/schemas'
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ practiceId: string }> }
 ) {
   try {
@@ -17,7 +19,7 @@ export async function GET(
     if (!user) return unauthorizedResponse()
 
     const { practiceId } = await params
-    const url = new URL(_req.url)
+    const url = new URL(req.url)
     const page = parseInt(url.searchParams.get('page') || '1')
     const perPage = Math.min(parseInt(url.searchParams.get('per_page') || '20'), 100)
     const search = url.searchParams.get('search') || ''
@@ -73,7 +75,7 @@ export async function POST(
       .from('practices')
       .select('id')
       .eq('id', practiceId)
-      .single()
+      .maybeSingle()
     if (!practice) return notFoundResponse('Practice')
 
     const body = await req.json().catch(() => null)
@@ -81,12 +83,22 @@ export async function POST(
 
     const parsed = knowledgeNoteSchema.safeParse(body)
     if (!parsed.success) {
-      return validationErrorResponse(parsed.error.errors.map(e => e.message).join(', '))
+      return validationErrorResponse(parsed.error.issues.map(e => e.message).join(', '))
     }
 
     const { data: note, error } = await supabase
       .from('knowledge_notes')
-      .insert({ ...parsed.data, practice_id: practiceId })
+      .insert({
+        title: parsed.data.title ?? null,
+        content: parsed.data.content,
+        category: parsed.data.category ?? null,
+        tags: parsed.data.tags ?? null,
+        related_topics: parsed.data.related_topics ?? null,
+        event_date: parsed.data.event_date ?? null,
+        expires_at: parsed.data.expires_at ?? null,
+        pinned: parsed.data.pinned ?? false,
+        practice_id: practiceId,
+      })
       .select()
       .single()
 

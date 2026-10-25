@@ -25,7 +25,6 @@ export default function SocialAccountsPage() {
   const [apiKey, setApiKey] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [connectError, setConnectError] = useState('')
-  const [connectSuccess, setConnectSuccess] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -40,7 +39,6 @@ export default function SocialAccountsPage() {
       }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function fetchConnections(pid: string) {
@@ -72,10 +70,8 @@ export default function SocialAccountsPage() {
     }
 
     setConnecting(false)
-    setConnectSuccess(true)
     setApiKey('')
     setShowConnect(false)
-    setConnectSuccess(false)
     await fetchConnections(practiceId)
   }
 

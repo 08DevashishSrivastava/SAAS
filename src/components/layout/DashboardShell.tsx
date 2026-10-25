@@ -27,7 +27,7 @@ const bottomNavItems = [
   { href: '/dashboard/billing', label: 'Billing', icon: '💳' },
 ]
 
-export default function DashboardShell({ children, user, profile, practiceId }: DashboardShellProps) {
+export default function DashboardShell({ children, user, profile }: DashboardShellProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)

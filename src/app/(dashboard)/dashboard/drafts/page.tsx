@@ -21,6 +21,7 @@ export default function DraftsPage() {
   const [platform, setPlatform] = useState('')
   const [editCaption, setEditCaption] = useState<Caption | null>(null)
   const [editBody, setEditBody] = useState('')
+  const [editError, setEditError] = useState('')
   const [saving, setSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -59,20 +60,40 @@ export default function DraftsPage() {
   async function handleSaveEdit() {
     if (!editCaption) return
     setSaving(true)
-    await fetch(`/api/captions/${editCaption.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: editBody }),
-    })
-    setSaving(false)
-    setEditCaption(null)
-    await fetchCaptions(practiceId)
+    setEditError('')
+    try {
+      const res = await fetch(`/api/captions/${editCaption.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: editBody }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setEditError(json.error || 'Failed to save caption.')
+        return
+      }
+      setEditCaption(null)
+      await fetchCaptions(practiceId)
+    } catch {
+      setEditError('Network error while saving. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDelete(id: string) {
-    setDeleteId(null)
-    await fetch(`/api/captions/${id}`, { method: 'DELETE' })
-    await fetchCaptions(practiceId)
+    try {
+      const res = await fetch(`/api/captions/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json()
+        alert(json.error || 'Failed to delete caption.')
+        return
+      }
+      setDeleteId(null)
+      await fetchCaptions(practiceId)
+    } catch {
+      alert('Network error while deleting caption.')
+    }
   }
 
   async function copyCaption(cap: Caption) {
@@ -187,6 +208,11 @@ export default function DraftsPage() {
               <h2 style={{ fontSize: '1.125rem', margin: 0 }}>Edit caption</h2>
               <button onClick={() => setEditCaption(null)} className="btn btn-ghost btn-sm">✕</button>
             </div>
+            {editError && (
+              <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
+                <span>⚠</span> {editError}
+              </div>
+            )}
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="label">Caption text</label>
               <textarea

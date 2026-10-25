@@ -79,12 +79,12 @@ export default function HomePage() {
       {/* ─── Navigation ─────────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(250, 250, 246, 0.92)',
+        background: 'rgba(250, 250, 246, 0.95)',
         backdropFilter: 'blur(12px)',
         borderBottom: '1px solid var(--color-border)',
       }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64, width: '100%' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', flexShrink: 0 }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
               background: 'var(--color-primary)',
@@ -94,37 +94,39 @@ export default function HomePage() {
             <span style={{ fontWeight: 700, fontSize: '1.0625rem', color: 'var(--color-charcoal)' }}>Caption AI</span>
           </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <Link href="#features" style={{ fontSize: '0.875rem', color: 'var(--color-secondary-text)', fontWeight: 500, textDecoration: 'none' }}>Features</Link>
-            <Link href="#pricing" style={{ fontSize: '0.875rem', color: 'var(--color-secondary-text)', fontWeight: 500, textDecoration: 'none' }}>Pricing</Link>
-            <Link href="/sign-in" className="btn btn-ghost btn-sm">Sign in</Link>
-            <Link href="/sign-up" className="btn btn-primary btn-sm">Get started free</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginRight: '0.5rem' }}>
+              <Link href="#features" style={{ fontSize: '0.875rem', color: 'var(--color-secondary-text)', fontWeight: 500, textDecoration: 'none' }}>Features</Link>
+              <Link href="#pricing" style={{ fontSize: '0.875rem', color: 'var(--color-secondary-text)', fontWeight: 500, textDecoration: 'none' }}>Pricing</Link>
+            </div>
+            <Link href="/sign-in" className="btn btn-ghost btn-sm" style={{ padding: '0.4rem 0.75rem', fontSize: '0.8125rem' }}>Sign in</Link>
+            <Link href="/sign-in" className="btn btn-primary btn-sm" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>⚡ Try Demo</Link>
           </div>
         </div>
       </nav>
 
       {/* ─── Hero ────────────────────────────────────────────────────────────── */}
-      <section style={{ padding: '5rem 1.5rem 4rem', textAlign: 'center', maxWidth: 900, margin: '0 auto' }}>
-        <div className="badge badge-lavender" style={{ marginBottom: '1.5rem', fontSize: '0.8125rem' }}>
+      <section style={{ padding: '4rem 1rem 3rem', textAlign: 'center', maxWidth: 900, margin: '0 auto', width: '100%' }}>
+        <div className="badge badge-lavender" style={{ marginBottom: '1.25rem', fontSize: '0.8125rem' }}>
           ✨ Built for medical &amp; dental practices
         </div>
 
-        <h1 style={{ fontSize: 'clamp(2.25rem, 5vw, 3.5rem)', fontWeight: 800, color: 'var(--color-charcoal)', marginBottom: '1.25rem', lineHeight: 1.15 }}>
+        <h1 className="hero-heading" style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 800, color: 'var(--color-charcoal)', marginBottom: '1.25rem', lineHeight: 1.15 }}>
           Social captions that sound<br />
           <span style={{ color: 'var(--color-primary)' }}>like your practice.</span>
         </h1>
 
-        <p style={{ fontSize: '1.125rem', color: 'var(--color-secondary-text)', maxWidth: 640, margin: '0 auto 2.5rem', lineHeight: 1.7 }}>
+        <p style={{ fontSize: '1.0625rem', color: 'var(--color-secondary-text)', maxWidth: 640, margin: '0 auto 2rem', lineHeight: 1.7 }}>
           Turn everyday clinic updates and medical insights into authentic social media captions,
           written in your voice and ready for Instagram and Facebook.
         </p>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/sign-up" className="btn btn-primary btn-lg">
-            Start creating captions
+        <div style={{ display: 'flex', gap: '0.875rem', justifyContent: 'center', flexWrap: 'wrap', width: '100%', maxWidth: 500, margin: '0 auto' }}>
+          <Link href="/sign-in" className="btn btn-primary btn-lg" style={{ flex: '1 1 200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+            ⚡ Try Live Demo
           </Link>
-          <Link href="#how-it-works" className="btn btn-secondary btn-lg">
-            See how it works
+          <Link href="/sign-up" className="btn btn-secondary btn-lg" style={{ flex: '1 1 200px', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }}>
+            Start creating captions
           </Link>
         </div>
 
@@ -133,16 +135,16 @@ export default function HomePage() {
         </p>
 
         {/* Dashboard Preview (Demo) */}
-        <div className="card" style={{ marginTop: '3.5rem', padding: '0', overflow: 'hidden', textAlign: 'left', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--color-border)' }}>
+        <div className="card" style={{ marginTop: '3rem', padding: '0', overflow: 'hidden', textAlign: 'left', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--color-border)', width: '100%' }}>
           {/* Demo label */}
           <div style={{ background: 'var(--color-amber-light)', padding: '0.5rem 1rem', borderBottom: '1px solid var(--color-border)', fontSize: '0.75rem', color: 'var(--color-amber)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span>⚠</span> Sample demonstration — not real data
           </div>
 
           {/* Mock Dashboard */}
-          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: 420 }}>
+          <div className="landing-preview-grid" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: 380, width: '100%' }}>
             {/* Sidebar */}
-            <div style={{ background: 'var(--color-white)', borderRight: '1px solid var(--color-border)', padding: '1.25rem 0.75rem' }}>
+            <div className="landing-preview-sidebar" style={{ background: 'var(--color-white)', borderRight: '1px solid var(--color-border)', padding: '1.25rem 0.75rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-secondary-text)', padding: '0 0.75rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Menu</div>
               {['Overview', 'Generate Captions', 'Knowledge Bank', 'Drafts', 'Calendar'].map((item, i) => (
                 <div key={item} className={`sidebar-link ${i === 1 ? 'active' : ''}`} style={{ pointerEvents: 'none' }}>
@@ -153,7 +155,7 @@ export default function HomePage() {
             </div>
 
             {/* Content */}
-            <div style={{ padding: '1.5rem', background: 'var(--color-bg)' }}>
+            <div className="landing-preview-content" style={{ padding: '1.5rem', background: 'var(--color-bg)', width: '100%', overflow: 'hidden' }}>
               <h3 style={{ fontSize: '1.0625rem', marginBottom: '1rem', color: 'var(--color-charcoal)' }}>Generated Captions</h3>
               {[
                 {
@@ -165,7 +167,7 @@ export default function HomePage() {
                   badge: 'draft', review: true,
                 },
               ].map((cap, i) => (
-                <div key={i} className="card card-hover ai-glow" style={{ marginBottom: '0.75rem', padding: '1rem' }}>
+                <div key={i} className="card card-hover ai-glow" style={{ marginBottom: '0.75rem', padding: '1rem', width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.625rem' }}>
                     <span className="badge badge-lavender" style={{ fontSize: '0.6875rem' }}>{cap.platform}</span>
                     {cap.review && <span className="badge badge-amber" style={{ fontSize: '0.6875rem' }}>Review suggested</span>}

@@ -42,7 +42,6 @@ export default function CalendarPage() {
       }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function fetchPosts(pid: string) {

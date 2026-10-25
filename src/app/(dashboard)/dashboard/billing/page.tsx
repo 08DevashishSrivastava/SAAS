@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
+import type { Tables } from '@/types/database'
 
 export const metadata: Metadata = { title: 'Billing — Caption AI' }
 
@@ -11,27 +11,43 @@ export default async function BillingPage() {
     .from('organization_members')
     .select('organization_id')
     .limit(1)
-    .single()
+    .maybeSingle()
 
-  const { data: subscription } = member ? await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('organization_id', member.organization_id)
-    .single() : { data: null }
+  let subscription: Tables<'subscriptions'> | null = null
+  let usage: { operation: string; quantity: number }[] = []
 
-  const { data: usage } = member ? await supabase
-    .from('usage_records')
-    .select('operation, quantity')
-    .eq('organization_id', member.organization_id)
-    .gte('created_at', new Date(new Date().setDate(1)).toISOString()) : { data: null }
+  if (member?.organization_id) {
+    const [subRes, usageRes] = await Promise.all([
+      supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('organization_id', member.organization_id)
+        .maybeSingle(),
+      supabase
+        .from('usage_records')
+        .select('operation, quantity')
+        .eq('organization_id', member.organization_id)
+        .gte('created_at', new Date(new Date().setDate(1)).toISOString()),
+    ])
 
-  const captionUsage = (usage || []).filter(u => u.operation === 'caption_generation').reduce((s, u) => s + (u.quantity || 0), 0)
+    subscription = subRes.data
+    usage = (usageRes.data || []) as { operation: string; quantity: number }[]
+  }
+
+  const captionUsage = usage
+    .filter(u => u.operation === 'caption_generation')
+    .reduce((s, u) => s + (u.quantity || 0), 0)
+
   const plan = subscription?.plan || 'free'
   const planLimits: Record<string, number> = { free: 10, pro: 200, team: 1000 }
   const limit = planLimits[plan] || 10
   const usagePct = Math.min(100, Math.round((captionUsage / limit) * 100))
 
-  const planColors: Record<string, string> = { free: 'var(--color-secondary-text)', pro: 'var(--color-primary)', team: 'var(--color-lavender)' }
+  const planColors: Record<string, string> = {
+    free: 'var(--color-secondary-text)',
+    pro: 'var(--color-primary)',
+    team: 'var(--color-lavender)',
+  }
 
   return (
     <div style={{ padding: '2rem', maxWidth: 760 }}>

@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -9,6 +7,7 @@ import {
 import { captionGenerationSchema } from '@/lib/validation/schemas'
 import { generateCaptions } from '@/services/ai/caption-generator'
 import type { CaptionGenerationRequest } from '@/types'
+import type { Json } from '@/types/database'
 
 export async function POST(
   req: NextRequest,
@@ -26,7 +25,7 @@ export async function POST(
       .from('practices')
       .select('*')
       .eq('id', practiceId)
-      .single()
+      .maybeSingle()
 
     if (practiceError || !practice) return notFoundResponse('Practice')
 
@@ -36,7 +35,7 @@ export async function POST(
 
     const parsed = captionGenerationSchema.safeParse({ ...body, practice_id: practiceId })
     if (!parsed.success) {
-      return validationErrorResponse(parsed.error.issues.map((e: any) => e.message).join(', '))
+      return validationErrorResponse(parsed.error.issues.map(e => e.message).join(', '))
     }
 
     const generationRequest: CaptionGenerationRequest = parsed.data
@@ -50,7 +49,7 @@ export async function POST(
       .from('organization_members')
       .select('organization_id')
       .eq('user_id', user.id)
-      .single() as any
+      .maybeSingle()
 
     if (!orgMember) return unauthorizedResponse()
 
@@ -65,7 +64,7 @@ export async function POST(
       .from('subscriptions')
       .select('plan')
       .eq('organization_id', orgMember.organization_id)
-      .single()
+      .maybeSingle()
 
     const plan = subscription?.plan || 'free'
     const limits: Record<string, number> = { free: 10, pro: 200, team: 1000 }
@@ -105,14 +104,14 @@ export async function POST(
       notes || []
     )
 
-    // 6. Save all generated captions as drafts in a transaction-like manner
+    // 6. Save all generated captions as drafts
     const captionInserts = result.captions.map((cap) => ({
       practice_id: practiceId,
       created_by: user.id,
       body: cap.body,
-      opening_hook: cap.opening_hook,
-      call_to_action: cap.call_to_action,
-      hashtags: cap.hashtags,
+      opening_hook: cap.opening_hook || null,
+      call_to_action: cap.call_to_action || null,
+      hashtags: cap.hashtags || null,
       platform: cap.platform,
       status: 'draft' as const,
       generation_metadata: {
@@ -120,8 +119,8 @@ export async function POST(
         token_usage: result.usage,
         topic: generationRequest.topic,
         caption_count: generationRequest.caption_count,
-      },
-      safety_flags: cap.safety_flags,
+      } as unknown as Json,
+      safety_flags: cap.safety_flags || null,
       review_required: cap.review_required,
     }))
 
@@ -141,7 +140,7 @@ export async function POST(
       operation: 'caption_generation',
       quantity: result.captions.length,
       model: result.model,
-      token_usage: result.usage,
+      token_usage: result.usage as unknown as Json,
     })
 
     // 8. Link source notes
@@ -165,9 +164,8 @@ export async function POST(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
 
-    // Provide actionable errors for known cases
     if (message.includes('API key')) {
-      return errorResponse('OpenAI API key is not configured. Please contact support.', 503, 'AI_NOT_CONFIGURED')
+      return errorResponse('OpenAI API key is not configured. Please set a valid OPENAI_API_KEY.', 503, 'AI_NOT_CONFIGURED')
     }
     if (message.includes('rate limit') || message.includes('429')) {
       return errorResponse('AI service is temporarily rate-limited. Please try again in a moment.', 429, 'AI_RATE_LIMIT')

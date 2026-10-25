@@ -1,7 +1,12 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { successResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/security/api-response'
+import {
+  successResponse,
+  unauthorizedResponse,
+  notFoundResponse,
+  validationErrorResponse,
+  serverErrorResponse,
+} from '@/lib/security/api-response'
 import { captionUpdateSchema } from '@/lib/validation/schemas'
 
 export async function GET(
@@ -19,9 +24,9 @@ export async function GET(
       .from('captions')
       .select(`*, caption_media(position, media_assets(*))`)
       .eq('id', captionId)
-      .single()
+      .maybeSingle()
 
-    if (error || !data) return successResponse(null, 404)
+    if (error || !data) return notFoundResponse('Caption')
     return successResponse(data)
   } catch (error) {
     return serverErrorResponse(error, 'GET caption')
@@ -42,7 +47,7 @@ export async function PATCH(
 
     const parsed = captionUpdateSchema.partial().safeParse(body || {})
     if (!parsed.success) {
-      return successResponse({ error: parsed.error.message }, 422)
+      return validationErrorResponse(parsed.error.message)
     }
 
     const { data, error } = await supabase
@@ -50,9 +55,9 @@ export async function PATCH(
       .update(parsed.data)
       .eq('id', captionId)
       .select()
-      .single()
+      .maybeSingle()
 
-    if (error || !data) return successResponse(null, 404)
+    if (error || !data) return notFoundResponse('Caption')
     return successResponse(data)
   } catch (error) {
     return serverErrorResponse(error, 'PATCH caption')
@@ -72,7 +77,7 @@ export async function DELETE(
     const { error } = await supabase.from('captions').delete().eq('id', captionId)
     if (error) return serverErrorResponse(error, 'deleting caption')
 
-    return successResponse({ deleted: true })
+    return successResponse({ deleted: true, id: captionId })
   } catch (error) {
     return serverErrorResponse(error, 'DELETE caption')
   }

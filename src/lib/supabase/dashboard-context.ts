@@ -4,9 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 export const getDashboardContext = cache(async () => {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
-  if (userError) throw userError
 
-  if (!user) {
+  if (userError || !user) {
     return { supabase, user: null, practice: null, profile: null }
   }
 
@@ -23,13 +22,17 @@ export const getDashboardContext = cache(async () => {
       .maybeSingle(),
   ])
 
-  if (practiceResult.error) throw practiceResult.error
-  if (profileResult.error) throw profileResult.error
+  if (practiceResult.error) {
+    console.warn('[Dashboard Context Warning] Practice lookup error:', practiceResult.error.message)
+  }
+  if (profileResult.error) {
+    console.warn('[Dashboard Context Warning] Profile lookup error:', profileResult.error.message)
+  }
 
   return {
     supabase,
     user,
-    practice: practiceResult.data,
-    profile: profileResult.data,
+    practice: practiceResult.data ?? null,
+    profile: profileResult.data ?? null,
   }
 })

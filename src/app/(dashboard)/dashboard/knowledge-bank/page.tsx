@@ -14,6 +14,8 @@ export default function KnowledgeBankPage() {
   const [practiceId, setPracticeId] = useState('')
   const [editNote, setEditNote] = useState<KnowledgeNote | null>(null)
 
+  const [modalError, setModalError] = useState('')
+
   const [form, setForm] = useState({
     title: '', content: '', category: '', tags: '', pinned: false,
   })
@@ -49,12 +51,14 @@ export default function KnowledgeBankPage() {
 
   function openAdd() {
     setEditNote(null)
+    setModalError('')
     setForm({ title: '', content: '', category: '', tags: '', pinned: false })
     setShowAdd(true)
   }
 
   function openEdit(note: KnowledgeNote) {
     setEditNote(note)
+    setModalError('')
     setForm({
       title: note.title || '',
       content: note.content,
@@ -68,6 +72,7 @@ export default function KnowledgeBankPage() {
   async function handleSave() {
     if (!form.content.trim()) return
     setSaving(true)
+    setModalError('')
 
     const payload = {
       title: form.title || undefined,
@@ -77,23 +82,32 @@ export default function KnowledgeBankPage() {
       pinned: form.pinned,
     }
 
-    if (editNote) {
-      await fetch(`/api/notes/${editNote.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-    } else {
-      await fetch(`/api/practices/${practiceId}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-    }
+    try {
+      const res = editNote
+        ? await fetch(`/api/notes/${editNote.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+        : await fetch(`/api/practices/${practiceId}/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
 
-    setSaving(false)
-    setShowAdd(false)
-    await fetchNotes(practiceId)
+      const json = await res.json()
+      if (!res.ok) {
+        setModalError(json.error || 'Failed to save note.')
+        return
+      }
+
+      setShowAdd(false)
+      await fetchNotes(practiceId)
+    } catch {
+      setModalError('Network error while saving note. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleArchive(note: KnowledgeNote) {
@@ -215,6 +229,12 @@ export default function KnowledgeBankPage() {
               <h2 style={{ fontSize: '1.125rem', margin: 0 }}>{editNote ? 'Edit note' : 'Add note'}</h2>
               <button onClick={() => setShowAdd(false)} className="btn btn-ghost btn-sm" style={{ fontSize: '1.25rem', lineHeight: 1 }}>✕</button>
             </div>
+
+            {modalError && (
+              <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
+                <span>⚠</span> {modalError}
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="form-group">

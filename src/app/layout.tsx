@@ -1,5 +1,12 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
+
+export const viewport: Viewport = {
+  themeColor: '#0284c7',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
 
 export const metadata: Metadata = {
   title: {
@@ -12,6 +19,15 @@ export const metadata: Metadata = {
   authors: [{ name: 'Caption AI' }],
   creator: 'Caption AI',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Caption AI',
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
   openGraph: {
     title: 'Caption AI — Social Captions for Medical & Dental Practices',
     description: 'Your practice. Your voice. Your next post.',

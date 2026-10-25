@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
 import Link from 'next/link'
 import { connection } from 'next/server'
 import type { Metadata } from 'next'
@@ -15,7 +13,6 @@ import {
 import { getCuratedTopic } from '@/services/ai/topic-generator'
 
 export const metadata: Metadata = { title: 'Dashboard Overview — Caption AI' }
-export const instant = false
 
 export default async function DashboardPage() {
   await connection()
@@ -39,13 +36,13 @@ export default async function DashboardPage() {
     supabase.from('knowledge_notes').select('*', { count: 'exact', head: true }).eq('practice_id', practiceId || '').is('archived_at', null),
     supabase.from('captions').select('*').eq('practice_id', practiceId || '').order('created_at', { ascending: false }).limit(4),
     supabase.from('knowledge_notes').select('*').eq('practice_id', practiceId || '').is('archived_at', null).order('created_at', { ascending: false }).limit(3),
-    supabase.from('social_connections').select('connection_status').eq('practice_id', practiceId || '').limit(1).single(),
+    supabase.from('social_connections').select('connection_status').eq('practice_id', practiceId || '').limit(1).maybeSingle(),
     practiceId
       ? supabase.rpc('caption_activity_by_day', {
           p_practice_id: practiceId,
           p_timezone: practice?.timezone || 'UTC',
         })
-      : Promise.resolve({ data: [], error: null }),
+      : Promise.resolve({ data: [] as { activity_date: string; caption_count: number }[], error: null }),
   ])
 
   if (activityError) console.error('[Dashboard Activity Error]', activityError.message)

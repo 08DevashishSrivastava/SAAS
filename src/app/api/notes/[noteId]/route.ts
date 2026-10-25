@@ -1,9 +1,11 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
-  successResponse, unauthorizedResponse, notFoundResponse,
-  serverErrorResponse, validationErrorResponse
+  successResponse,
+  unauthorizedResponse,
+  notFoundResponse,
+  serverErrorResponse,
+  validationErrorResponse,
 } from '@/lib/security/api-response'
 import { knowledgeNoteSchema } from '@/lib/validation/schemas'
 
@@ -20,11 +22,6 @@ export async function PATCH(
     const body = await req.json().catch(() => null)
     if (!body) return validationErrorResponse('Request body is required')
 
-    const parsed = knowledgeNoteSchema.partial().safeParse(body)
-    if (!parsed.success) {
-      return validationErrorResponse(parsed.error.errors.map(e => e.message).join(', '))
-    }
-
     // Handle archive action
     if (body.archive === true) {
       const { data, error } = await supabase
@@ -32,7 +29,7 @@ export async function PATCH(
         .update({ archived_at: new Date().toISOString() })
         .eq('id', noteId)
         .select()
-        .single()
+        .maybeSingle()
       if (error || !data) return notFoundResponse('Note')
       return successResponse(data)
     }
@@ -43,9 +40,14 @@ export async function PATCH(
         .update({ archived_at: null })
         .eq('id', noteId)
         .select()
-        .single()
+        .maybeSingle()
       if (error || !data) return notFoundResponse('Note')
       return successResponse(data)
+    }
+
+    const parsed = knowledgeNoteSchema.partial().safeParse(body)
+    if (!parsed.success) {
+      return validationErrorResponse(parsed.error.issues.map(e => e.message).join(', '))
     }
 
     const { data, error } = await supabase
@@ -53,7 +55,7 @@ export async function PATCH(
       .update(parsed.data)
       .eq('id', noteId)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error || !data) return notFoundResponse('Note')
     return successResponse(data)
@@ -78,7 +80,8 @@ export async function DELETE(
       .eq('id', noteId)
 
     if (error) return serverErrorResponse(error, 'deleting note')
-    return successResponse({ deleted: true })
+
+    return successResponse({ deleted: true, id: noteId })
   } catch (error) {
     return serverErrorResponse(error, 'DELETE note')
   }

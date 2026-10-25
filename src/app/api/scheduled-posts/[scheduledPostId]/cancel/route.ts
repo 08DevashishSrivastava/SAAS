@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, unauthorizedResponse, serverErrorResponse, errorResponse } from '@/lib/security/api-response'
@@ -20,11 +19,14 @@ export async function POST(
     const { data: scheduledPost, error } = await supabase
       .from('scheduled_posts')
       .select(`
-        *, captions(practice_id),
-        social_accounts(social_connections(encrypted_credential, practice_id))
+        *,
+        captions(practice_id),
+        social_accounts(
+          social_connections(encrypted_credential, practice_id)
+        )
       `)
       .eq('id', scheduledPostId)
-      .single()
+      .maybeSingle()
 
     if (error || !scheduledPost) return errorResponse('Scheduled post not found', 404)
 
@@ -34,7 +36,11 @@ export async function POST(
 
     // Cancel with Postiz if we have an external ID
     if (scheduledPost.external_post_id) {
-      const conn = (scheduledPost as unknown as { social_accounts: { social_connections: { encrypted_credential: string } } }).social_accounts?.social_connections
+      const socialAccount = scheduledPost.social_accounts as unknown as {
+        social_connections: { encrypted_credential: string } | null
+      } | null
+
+      const conn = socialAccount?.social_connections
       if (conn?.encrypted_credential) {
         try {
           const apiKey = decrypt(conn.encrypted_credential)

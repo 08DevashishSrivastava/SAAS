@@ -1,5 +1,4 @@
 import OpenAI from 'openai'
-import { z } from 'zod'
 import type { Practice, VoiceSample, KnowledgeNote, CaptionGenerationRequest, GenerationResult } from '@/types'
 import { generationResultSchema } from '@/lib/validation/schemas'
 

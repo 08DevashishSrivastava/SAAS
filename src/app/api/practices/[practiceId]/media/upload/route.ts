@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/security/api-response'
@@ -21,7 +20,7 @@ export async function POST(
       .from('practices')
       .select('id, organization_id')
       .eq('id', practiceId)
-      .single()
+      .maybeSingle()
     if (!practice) return errorResponse('Practice not found', 404)
 
     // Parse multipart form data
@@ -108,11 +107,11 @@ function validateImageMagicBytes(bytes: Uint8Array, mimeType: string): boolean {
     'image/jpeg': [[0xFF, 0xD8, 0xFF]],
     'image/png': [[0x89, 0x50, 0x4E, 0x47]],
     'image/gif': [[0x47, 0x49, 0x46, 0x38]],
-    'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header, check further for WEBP
+    'image/webp': [[0x52, 0x49, 0x46, 0x46]],
   }
 
   const sigs = signatures[mimeType]
-  if (!sigs) return true // unknown type — allow and let Supabase storage handle it
+  if (!sigs) return true
 
   return sigs.some((sig) =>
     sig.every((byte, i) => bytes[i] === byte)

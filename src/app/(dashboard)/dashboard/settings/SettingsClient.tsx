@@ -42,7 +42,11 @@ export default function SettingsClient({ user, profile, practice }: Props) {
   async function saveProfile() {
     setSaving(true); setSuccess(''); setError('')
     const supabase = createClient()
-    const { error: err } = await supabase.from('profiles').upsert({ id: user.id, full_name: profileForm.full_name } as any)
+    const { error: err } = await supabase.from('profiles').upsert({
+      id: user.id,
+      full_name: profileForm.full_name,
+      updated_at: new Date().toISOString(),
+    })
     if (err) setError(err.message); else setSuccess('Profile saved successfully.')
     setSaving(false)
   }

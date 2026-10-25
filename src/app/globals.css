@@ -830,3 +830,23 @@
     animation: shimmer 1.5s infinite;
   }
 }
+
+/* ─── Mobile Responsiveness Enhancements ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .landing-nav-links {
+    display: none !important;
+  }
+  .landing-preview-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-preview-sidebar {
+    display: none !important;
+  }
+  .landing-preview-content {
+    padding: 1rem !important;
+  }
+  .hero-heading {
+    font-size: 2rem !important;
+    line-height: 1.2 !important;
+  }
+}

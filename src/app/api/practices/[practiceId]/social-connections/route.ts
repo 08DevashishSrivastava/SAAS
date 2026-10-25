@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -8,6 +7,7 @@ import {
 import { socialConnectionSchema } from '@/lib/validation/schemas'
 import { encrypt, CURRENT_KEY_VERSION } from '@/lib/security/encryption'
 import { fetchPostizAccounts } from '@/services/postiz/postiz-client'
+import type { Json } from '@/types/database'
 
 export async function GET(
   _req: NextRequest,
@@ -53,7 +53,7 @@ export async function POST(
       .from('practices')
       .select('id')
       .eq('id', practiceId)
-      .single()
+      .maybeSingle()
     if (!practice) return notFoundResponse('Practice')
 
     const body = await req.json().catch(() => null)
@@ -61,7 +61,7 @@ export async function POST(
 
     const parsed = socialConnectionSchema.safeParse(body)
     if (!parsed.success) {
-      return validationErrorResponse(parsed.error.errors.map(e => e.message).join(', '))
+      return validationErrorResponse(parsed.error.issues.map(e => e.message).join(', '))
     }
 
     // Test the API key by fetching accounts
@@ -100,7 +100,7 @@ export async function POST(
         external_account_id: acc.id,
         platform: acc.platform,
         display_name: acc.name,
-        safe_metadata: { picture: acc.picture },
+        safe_metadata: { picture: acc.picture } as unknown as Json,
       }, {
         onConflict: 'social_connection_id,external_account_id',
       })

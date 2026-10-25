@@ -34,6 +34,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       organizations: {
         Row: {
@@ -57,6 +58,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       organization_members: {
         Row: {
@@ -80,6 +82,15 @@ export interface Database {
           role?: 'owner' | 'admin' | 'editor' | 'viewer'
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       practices: {
         Row: {
@@ -145,6 +156,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "practices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       voice_samples: {
         Row: {
@@ -174,6 +194,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "voice_samples_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       knowledge_notes: {
         Row: {
@@ -221,6 +250,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_notes_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       captions: {
         Row: {
@@ -271,6 +309,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "captions_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       caption_source_notes: {
         Row: {
@@ -285,6 +332,22 @@ export interface Database {
           caption_id?: string
           knowledge_note_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "caption_source_notes_caption_id_fkey"
+            columns: ["caption_id"]
+            isOneToOne: false
+            referencedRelation: "captions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caption_source_notes_knowledge_note_id_fkey"
+            columns: ["knowledge_note_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_notes"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       media_assets: {
         Row: {
@@ -323,6 +386,15 @@ export interface Database {
           height?: number | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       caption_media: {
         Row: {
@@ -340,6 +412,22 @@ export interface Database {
           media_asset_id?: string
           position?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "caption_media_caption_id_fkey"
+            columns: ["caption_id"]
+            isOneToOne: false
+            referencedRelation: "captions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caption_media_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       social_connections: {
         Row: {
@@ -372,6 +460,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "social_connections_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       social_accounts: {
         Row: {
@@ -407,6 +504,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "social_accounts_social_connection_id_fkey"
+            columns: ["social_connection_id"]
+            isOneToOne: false
+            referencedRelation: "social_connections"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       scheduled_posts: {
         Row: {
@@ -448,6 +554,22 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_posts_caption_id_fkey"
+            columns: ["caption_id"]
+            isOneToOne: false
+            referencedRelation: "captions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_posts_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       scheduling_attempts: {
         Row: {
@@ -477,6 +599,15 @@ export interface Database {
           safe_error_metadata?: Json | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "scheduling_attempts_scheduled_post_id_fkey"
+            columns: ["scheduled_post_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_posts"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       subscriptions: {
         Row: {
@@ -515,6 +646,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       usage_records: {
         Row: {
@@ -544,6 +684,15 @@ export interface Database {
           token_usage?: Json | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "usage_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       audit_events: {
         Row: {
@@ -576,6 +725,15 @@ export interface Database {
           safe_metadata?: Json | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: Record<string, never>
@@ -612,3 +770,5 @@ export type TablesInsert<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Insert']
 export type TablesUpdate<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update']
+export type Enums<T extends keyof Database['public']['Enums']> =
+  Database['public']['Enums'][T]

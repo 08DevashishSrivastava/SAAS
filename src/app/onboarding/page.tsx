@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -38,6 +36,79 @@ export default function OnboardingPage() {
   const [customTopic, setCustomTopic] = useState('')
 
   const totalSteps = ONBOARDING_STEPS.length
+
+  useEffect(() => {
+    async function loadExistingState() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/sign-in')
+        return
+      }
+
+      const { data: practices } = await supabase
+        .from('practices')
+        .select('*')
+        .limit(1)
+
+      const practice = practices?.[0]
+      if (practice) {
+        setPracticeId(practice.id)
+        if (practice.onboarding_completed) {
+          router.push('/dashboard')
+          return
+        }
+
+        setPracticeData({
+          name: practice.name || '',
+          practice_type: practice.practice_type || '',
+          city: practice.city || '',
+          region: practice.region || '',
+          country: practice.country || 'India',
+          website: practice.website || '',
+          target_audience: practice.target_audience || 'Patients seeking dental care',
+          preferred_language: practice.preferred_language || 'en',
+          timezone: practice.timezone || 'Asia/Kolkata',
+        })
+
+        if (practice.preferred_topics && practice.preferred_topics.length > 0) {
+          setTopicsData({
+            preferred_topics: practice.preferred_topics,
+            custom_topics: [],
+          })
+        }
+
+        if (practice.preferred_tone) {
+          setToneData({
+            preferred_tone: practice.preferred_tone,
+            tone_description: '',
+          })
+        }
+
+        const { data: samples } = await supabase
+          .from('voice_samples')
+          .select('*')
+          .eq('practice_id', practice.id)
+
+        if (samples && samples.length > 0) {
+          setVoiceSamples(
+            samples.map((s) => ({
+              id: s.id,
+              title: s.title || '',
+              content: s.content,
+              source_type: s.source_type || '',
+            }))
+          )
+        }
+
+        if (!practice.name) setStep(1)
+        else if (!practice.preferred_topics || practice.preferred_topics.length === 0) setStep(2)
+        else if (!practice.preferred_tone) setStep(3)
+        else setStep(4)
+      }
+    }
+    loadExistingState()
+  }, [router])
 
   // ── Step 1: Save practice ────────────────────────────────────────────────
   async function saveStep1() {
@@ -112,17 +183,29 @@ export default function OnboardingPage() {
         .maybeSingle()
       if (practiceLookupError) throw practiceLookupError
 
+      const practicePayload = {
+        name: practiceData.name.trim(),
+        practice_type: practiceData.practice_type || null,
+        city: practiceData.city || null,
+        region: practiceData.region || null,
+        country: practiceData.country || null,
+        website: practiceData.website || null,
+        target_audience: practiceData.target_audience || null,
+        preferred_language: practiceData.preferred_language || 'en',
+        timezone: practiceData.timezone || 'Asia/Kolkata',
+      }
+
       if (existingPractice) {
         const { error: updateError } = await supabase
           .from('practices')
-          .update(practiceData)
+          .update(practicePayload)
           .eq('id', existingPractice.id)
         if (updateError) throw updateError
         setPracticeId(existingPractice.id)
       } else {
         const { data: newPractice, error: practiceError } = await supabase
           .from('practices')
-          .insert({ ...practiceData, organization_id: orgId, onboarding_completed: false })
+          .insert({ ...practicePayload, organization_id: orgId, onboarding_completed: false })
           .select('id')
           .single()
         if (practiceError) throw practiceError
