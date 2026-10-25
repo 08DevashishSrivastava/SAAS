@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
             }
             webChromeClient = WebChromeClient()
 
+            clearCache(true)
             loadUrl(startUrl)
             webView = this
           }
