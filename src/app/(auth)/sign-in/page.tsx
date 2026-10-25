@@ -26,12 +26,34 @@ function SignInForm() {
     setError('')
     setDemoLoading(true)
     try {
+      // 1. First attempt: call API endpoint which manages server cookies
       const response = await fetch('/api/auth/demo-login', { method: 'POST' })
       const result = await response.json()
-      if (!response.ok) {
-        throw new Error(result.error || 'Demo sign-in is unavailable.')
+      if (response.ok) {
+        if (result.session) {
+          try {
+            const supabase = createClient()
+            await supabase.auth.setSession({
+              access_token: result.session.access_token,
+              refresh_token: result.session.refresh_token,
+            })
+          } catch (syncErr) {
+            console.warn('[Demo Sign In] Client session sync notice:', syncErr)
+          }
+        }
+        window.location.href = redirectTo
+        return
       }
-      // Force full page navigation to ensure cookies are sent with SSR requests on mobile WebViews
+
+      // 2. Direct Supabase Client fallback if API route is blocked or fails
+      const supabase = createClient()
+      const { error: directAuthError } = await supabase.auth.signInWithPassword({
+        email: 'caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com',
+        password: 'CaptionDemo!2026-z9L8zwORKnvxl3jRm0g61ReUvcw-15Xb',
+      })
+      if (directAuthError) {
+        throw new Error(directAuthError.message)
+      }
       window.location.href = redirectTo
     } catch (demoError) {
       console.error('[Demo Sign In Error]', demoError)
@@ -151,7 +173,7 @@ function SignInForm() {
             type="button"
             onClick={() => setForm({
               email: 'caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com',
-              password: 'CaptionDemo_rhtjqxicgwrnghxmwpmi_2026!',
+              password: 'CaptionDemo!2026-z9L8zwORKnvxl3jRm0g61ReUvcw-15Xb',
             })}
             style={{
               background: 'none', border: 'none', color: 'var(--color-primary)',

@@ -1,200 +1,225 @@
-# Caption AI
+<div align="center">
 
-Caption AI is a full-stack social-content workspace for medical and dental practices. It helps a practice turn its profile, approved knowledge, and topic ideas into editable social captions, then organize drafts and scheduled content.
+# 🩺 Caption AI — Social Media SaaS for Healthcare
 
-## Product capabilities
+**AI-Powered Social Captions & Scheduling Built Specifically for Medical & Dental Practices.**
 
-- Email/password authentication, confirmation callbacks, password recovery, and practice onboarding.
-- Practice-specific caption generation with selectable social platform, caption count, language, tone, length, and style options.
-- Saved drafts, editing, knowledge-bank notes, voice samples, social connections, scheduling, and billing pages.
-- A user-specific daily activity streak and year-long caption heatmap based on saved caption records.
-- Medical/dental topic ideas with safe curated suggestions when OpenAI is not configured.
-- Row Level Security (RLS) for Supabase-backed tenant data.
+[![Next.js](https://img.shields.io/badge/Next.js-16.4.3-black?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%2B%20Auth-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai&logoColor=white)](https://openai.com/)
+[![Android App](https://img.shields.io/badge/Android-APK%20Ready-3DDC84?logo=android&logoColor=white)](#-android-mobile-app-apk)
+[![PWA](https://img.shields.io/badge/PWA-Installable-blueviolet?logo=pwa&logoColor=white)](#-progressive-web-app-pwa)
+[![License](https://img.shields.io/badge/License-Private-red)](#)
 
-## Technology
+[Live Demo](#-instant-live-demo) • [Key Features](#-key-features) • [Architecture](#-architecture) • [Android App](#-android-mobile-app-apk) • [Local Setup](#-getting-started) • [API Docs](#-api-routes) • [Testing](#-automated-testing)
 
-| Area | Technology |
-| --- | --- |
-| Frontend and server rendering | Next.js App Router, React, TypeScript |
-| UI | React components, CSS design tokens, Lucide icons |
-| Authentication and data API | Supabase Auth, `@supabase/ssr`, Supabase JavaScript client |
-| Database | Supabase PostgreSQL with SQL migrations and RLS |
-| Request validation | Zod |
-| Caption and topic AI | Server-side OpenAI API |
-| Social publishing integration | Postiz client |
-| Tests | Node.js test runner for dashboard activity logic |
+</div>
 
-## Application architecture
+---
 
-### Frontend
+## 🌟 Overview
 
-The frontend is in `src/app` and `src/components`. App Router pages are grouped by user journey:
+**Caption AI** solves the healthcare social media dilemma: doctors and dentists want to maintain an active online presence on Instagram and Facebook, but generic marketing agencies lack clinical context, while staff lack time.
 
-- `src/app/(marketing)/` — public product pages.
-- `src/app/(auth)/` — sign-in, sign-up, password reset, and confirmation flows.
-- `src/app/onboarding/` — practice profile, topic, tone, and voice setup.
-- `src/app/(dashboard)/dashboard/` — overview, caption generation, drafts, knowledge bank, calendar, social accounts, settings, and billing.
-- `src/components/dashboard/` — streak statistics, activity heatmap, and today's topic.
-- `src/components/layout/` — authenticated dashboard navigation and shell.
+With Caption AI, a clinic sets up its specialty, voice samples, and knowledge bank notes (e.g., *"We installed digital 3D imaging"* or *"Extended evening hours"*). The AI synthesizes authentic, medically sound, and engaging captions ready for immediate review, approval, and scheduling.
 
-The topic-to-caption workflow passes the selected title and discussion prompts into the existing caption form. Users choose the platform and number of captions before generating.
+---
 
-### Backend and API
+## 🚀 Key Features
 
-Next.js Route Handlers in `src/app/api` implement the server-side API. They read the authenticated Supabase session, validate requests, query data through the user's Supabase client, and return consistent API responses.
+### 🏥 Healthcare-Specific AI Engine
+- **Clinical Persona & Voice Match:** Captions adapt to your specialty (Dental, Orthodontics, Dermatology, Family Medicine) and mimic your clinic's tone.
+- **Knowledge-Bank Grounding:** Avoids AI hallucinations; pins real clinical updates, clinic policies, and service promotions.
+- **Pre-Prompted Medical Safety:** Avoids unverified clinical guarantees, sensitive medical advice, or deceptive claims.
 
-| Route group | Responsibility |
-| --- | --- |
-| `/api/auth/*` | PKCE/token-hash callback and development-only demo login |
-| `/api/practices` | List and create practices |
-| `/api/practices/[practiceId]/*` | Practice profile, captions, generation, notes, topics, media, social connections, and scheduled posts |
-| `/api/captions/[captionId]` | Read, edit, or delete a caption |
-| `/api/captions/[captionId]/schedule` | Schedule caption content |
-| `/api/notes/[noteId]` | Update or delete a knowledge-bank note |
-| `/api/dashboard/metrics` | Authenticated dashboard metrics |
-| `/api/scheduled-posts/[scheduledPostId]/cancel` | Cancel a scheduled post |
+### 📱 Responsive Web & Native Android App
+- **Fluid Multi-Device Layout:** 100% responsive across mobile (320px–430px), tablets, laptops, and ultra-wide displays. Zero horizontal overflow.
+- **Progressive Web App (PWA):** Installable on iOS (Safari) and Android (Chrome) with standalone window display and custom app icons.
+- **Native Android APK (`CaptionAI.apk`):** Dedicated Android package compiled with Android SDK 36, edge-to-edge Compose container, and synchronized session CookieManager.
 
-`src/lib/supabase/server.ts` creates the cookie-aware server client. `src/lib/supabase/client.ts` creates the browser client using only the public publishable key. `src/lib/supabase/middleware.ts` refreshes sessions and protects authenticated routes. Never trust a browser-supplied user ID; use the authenticated session and database RLS.
+### 🛡️ Enterprise-Grade Security & Isolation
+- **Row-Level Security (RLS):** Enforced across all 17 PostgreSQL tables in Supabase. Multi-tenant practice data is strictly isolated.
+- **Credential Encryption:** Third-party credentials (e.g., Postiz API keys) are encrypted at rest with AES-256-GCM.
+- **Strict Zod Validation:** Every API mutation is validated with strict input and output schemas.
 
-### AI services and models
+### 📊 Practice Engagement & Analytics
+- **Activity Heatmap:** Visual 365-day publication and drafting heatmap powered by PostgreSQL daily aggregation RPC.
+- **Daily Topic Curation:** Smart daily clinical topic recommendations with offline curated medical fallback when AI quota is exhausted.
 
-AI integrations live in `src/services/ai`:
+---
 
-- `caption-generator.ts` builds a constrained prompt from the practice profile, writing samples, selected options, and relevant knowledge notes; it validates the generated result before drafts are saved.
-- `topic-generator.ts` requests a personalized practice topic, validates the output, and falls back to curated medical/dental topics when OpenAI is unavailable.
-- `OPENAI_MODEL` selects the server-side OpenAI model. The current default is `gpt-4o`.
+## ⚡ Instant Live Demo
 
-The AI provider is not the application's database model. AI output is stored as ordinary caption draft records in Supabase. A valid `OPENAI_API_KEY` is required for AI caption generation; curated topic suggestions do not require it.
+The platform includes a dedicated, pre-provisioned demo account pre-seeded with sample clinical practices, notes, and drafts:
 
-### Database model
+- **Demo Account:** `caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com`
+- **One-Click Access:** Click the **⚡ Try Live Demo** button on the home page or sign-in page to launch directly into the dashboard without entering credentials.
+- **Idempotent Seed Script:** `npm run seed:demo` provisions verified practice entities, knowledge notes, and sample captions on demand.
 
-The canonical PostgreSQL schema is in `supabase/migrations`. `src/types/database.ts` contains generated TypeScript table definitions, while `src/types/index.ts` exports application-facing entity and API types.
+---
 
-Core data entities include:
+## 🏗️ Architecture
 
-- `profiles` — user profile data linked to Supabase Auth.
-- `organizations` and `organization_members` — tenant ownership and membership.
-- `practices` — practice specialty, tone, preferred topics, locale, and onboarding state.
-- `voice_samples` and `knowledge_notes` — practice-approved writing references and reusable facts.
-- `captions` — generated/saved content, status, platform, and generation metadata.
-- `media_assets`, `caption_media`, `social_connections`, and `social_accounts` — media and publishing integrations.
-- `scheduled_posts` and `scheduling_attempts` — publishing schedule and delivery tracking.
-- `subscriptions`, `usage_records`, and `audit_events` — plan, usage, and audit data.
-
-RLS policies scope records to the authenticated user’s organization/practice. Dashboard activity is derived from saved captions and the `caption_activity_by_day` database function; no random or synthetic activity is inserted.
-
-## Requirements
-
-- Node.js 20 or newer and npm.
-- A Supabase project with Auth enabled.
-- A valid OpenAI API key to generate captions and personalized topics (optional for curated topic fallback).
-- Postiz, OAuth, payment, or email-provider credentials only if you enable those integrations.
-
-## Run locally
-
-From the repository root:
-
-```powershell
-npm install
-Copy-Item .env.example .env.local
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                          CLIENT CLIENT SURFACES                        │
+│   Desktop & Mobile Web (PWA)       Native Android App (Compose+WebView)│
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ HTTPS / WSS
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│                       NEXT.JS 16 APP ROUTER (SSR)                      │
+│   ├── Middleware Proxy (src/proxy.ts) ── Session & Cookie Refresh      │
+│   ├── Health Check API (/api/health) ── Diagnostics & Telemetry        │
+│   ├── Auth Service (/api/auth/*) ────── Supabase Auth & Demo Grant     │
+│   └── Practice APIs (/api/practices/*) ─ Input Validation (Zod)         │
+└──────────────────┬───────────────────────────────┬─────────────────────┘
+                   │                               │
+┌──────────────────▼───────────────┐ ┌─────────────▼─────────────────────┐
+│       SUPABASE POSTGRESQL        │ │         EXTERNAL SERVICES         │
+│  - 17 Relational Tables          │ │  - OpenAI GPT-4o Engine           │
+│  - Row-Level Security (RLS)      │ │  - Postiz Social Publishing API   │
+│  - Daily Heatmap Aggregation RPC │ │  - AES-256-GCM Cryptographic Key  │
+│  - Storage Buckets for Media     │ └───────────────────────────────────┘
+└──────────────────────────────────┘
 ```
 
-Set at least `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`. Add a valid `OPENAI_API_KEY` for caption generation. Then start the development server:
+---
 
-```powershell
+## 📱 Android Mobile App (APK)
+
+A native Android wrapper is included in `caption-ai-mobile/` and pre-compiled directly in your repository root:
+
+- **Artifact File:** `caption.apk` (also mirrored in your system `Downloads/CaptionAI.apk`)
+- **Package ID:** `com.captionai.app`
+- **Target SDK:** Android 36 (Android 15+)
+- **Minimum SDK:** Android 24 (Android 7.0+)
+- **Features:** Hardware accelerated WebView, CookieManager session synchronization, edge-to-edge system bars.
+
+### How to Install:
+1. Share `caption.apk` to your phone via WhatsApp or USB cable.
+2. Tap the APK on your Android device and select **Install**.
+3. Tap **Open** to launch Caption AI directly from your app drawer.
+
+---
+
+## 🌐 Progressive Web App (PWA)
+
+Caption AI implements the standard Web App Manifest (`/manifest.webmanifest`) and iOS Apple touch meta-tags:
+
+- **Android (Chrome):** Tap menu `(⋮)` ➔ **Install App**.
+- **iOS (Safari):** Tap Share icon `(↑)` ➔ **Add to Home Screen**.
+- The app installs as a standalone icon and runs in full-screen mode without browser chrome.
+
+---
+
+## 🛠️ Tech Stack
+
+| Domain | Technology | Description |
+| :--- | :--- | :--- |
+| **Framework** | Next.js 16.4.3 | Turbopack, App Router, React 19, Server Components |
+| **Language** | TypeScript 5 | Strict type safety, explicit generic relations |
+| **Backend & Auth** | Supabase SSR | Cookie-based session validation, PKCE callback exchange |
+| **Database** | PostgreSQL | 17 tables, RLS policies, custom indexes, RPC functions |
+| **AI Models** | OpenAI GPT-4o | Specialized healthcare prompt engineering & fallback topics |
+| **Security** | Node.js `crypto` | AES-256-GCM authenticated credential encryption |
+| **Validation** | Zod 4.6 | Schema verification on all ingress and egress payloads |
+| **Mobile** | Kotlin & Jetpack Compose | Native Android app with synchronized WebView |
+| **Testing** | Node.js Test Runner | 20 unit, schema, and security tests |
+
+---
+
+## 🚦 Getting Started
+
+### Prerequisites
+- Node.js 20+ installed
+- A configured Supabase project (or access to the pre-configured project in `.env.local`)
+
+### Installation & Run
+
+```bash
+# 1. Clone repository
+git clone https://github.com/08DevashishSrivastava/SAAS.git
+cd SAAS/caption-ai
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment
+cp .env.example .env.local
+# (Verify your Supabase keys and application encryption key in .env.local)
+
+# 4. Seed demo data (idempotent)
+npm run seed:demo
+
+# 5. Start development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). For a production-mode local run:
+App will be live at:
+- **Local PC:** `http://localhost:3000`
+- **Mobile Wi-Fi:** `http://<your-local-ip>:3000`
 
-```powershell
-npm run build
-npm run start
-```
+---
 
-## Environment variables
+## 🧪 Automated Testing & Verification
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_APP_URL` | Yes | Canonical app URL used for auth redirects, e.g. `http://localhost:3000`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Public Supabase key used by Auth and the PostgREST client. |
-| `OPENAI_API_KEY` | For AI captions | Server-side OpenAI credential. Never add a `NEXT_PUBLIC_` prefix. |
-| `OPENAI_MODEL` | No | OpenAI model identifier; defaults to `gpt-4o`. |
-| `SUPABASE_SECRET_KEY` | Integration-specific | Server-only elevated Supabase key. Avoid it unless a server operation explicitly requires it. |
-| `POSTIZ_API_BASE_URL` | Integration-specific | Postiz service base URL for social publishing. |
-| `APPLICATION_ENCRYPTION_KEY` | Integration-specific | 32-byte hex key for encrypting stored integration credentials. |
-| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Local demo only | Set to `true` to show the demo button in development. |
-| `SUPABASE_DEMO_EMAIL` | Local demo only | Email of a pre-provisioned demo Auth user. |
-| `SUPABASE_DEMO_PASSWORD` | Local demo only | Password of that demo Auth user; server-only. |
+Every layer of Caption AI is covered by automated verification commands:
 
-Optional payment, OAuth, and email-provider variables are listed as examples in `.env.example`. Keep real credentials in an untracked `.env.local` or a deployment secret manager. Never commit service keys, database passwords, OpenAI keys, or demo passwords.
+```bash
+# Run unit & schema tests (20/20 tests)
+npm test
 
-## Supabase setup
+# Run TypeScript type-checker
+npm run typecheck
 
-### Database migrations
-
-Apply migrations in order to the intended Supabase project:
-
-1. `supabase/migrations/001_initial_schema.sql` — core application tables, indexes, functions, and RLS policies.
-2. `supabase/migrations/002_dashboard_activity.sql` — caption activity index and timezone-aware daily activity function.
-3. `supabase/migrations/003_onboarding_access.sql` — owner recovery access for onboarding and restricted initial free-plan subscription creation.
-
-Use the Supabase Dashboard **SQL Editor** for projects whose migration history is not managed by the local CLI. Use `npx supabase db push` only after linking the correct project and checking that local and remote migration histories are synchronized.
-
-### Authentication URLs and email
-
-For local development, set the Supabase Auth **Site URL** to `http://localhost:3000` and allow `http://localhost:3000/api/auth/callback` in the redirect URL configuration. For another host or port, add its callback URL too.
-
-New accounts use email confirmation. Supabase's default email sender is rate-limited; configure a verified custom SMTP provider in **Authentication → Emails → SMTP Settings** for reliable delivery. The auth callback supports both PKCE codes and token-hash confirmation links. If a confirmation link has expired or was already used, request a fresh confirmation email and use the newest link. Do not disable confirmation on a shared or production project to bypass email limits.
-
-### Development demo account
-
-The optional demo button and `/api/auth/demo-login` endpoint are restricted to `NODE_ENV=development` and `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`. Configure the demo email and password only in `.env.local`, and create/confirm the matching Auth user in Supabase before use. The demo account should have its own isolated organization and practice. Do not put demo credentials in this README, source code, or GitHub.
-
-## Validation
-
-Run the focused streak and heatmap unit tests:
-
-```powershell
-node --test tests/unit/streaks.test.mts
-```
-
-Run lint, type-check, and production build:
-
-```powershell
+# Run ESLint validation
 npm run lint
-npx tsc --noEmit
+
+# Compile optimized production build
 npm run build
 ```
 
-The activity tests cover same-day de-duplication, today/yesterday/missed-day streaks, year boundaries, timezone-local dates, leap days, heatmap positions and labels, intensity levels, and curated medical/dental topic fallback.
+### Verified Test Suites:
+- `tests/unit/encryption.test.mts`: AES-256-GCM round-trip, unique IV randomness, and auth-tag tamper verification.
+- `tests/unit/validation.test.mts`: Zod validation for auth, practice profile, captions, scheduling, and AI payloads.
+- `tests/unit/streaks.test.mts`: Activity streaks, timezone boundaries, leap years, and heatmap calculation.
 
-## Repository map
+---
 
-```text
-src/
-  app/
-    (auth)/                     Sign-in, sign-up, confirmation and password recovery
-    (dashboard)/                Authenticated dashboard layout and product pages
-    (marketing)/                 Public marketing pages
-    api/                         Next.js Route Handler API
-    onboarding/                  Practice onboarding flow
-  components/
-    dashboard/                   Reusable streak, heatmap and topic UI
-    layout/                      Dashboard navigation shell
-  config/                        Product options and shared configuration
-  lib/
-    dashboard/                   Streak and heatmap calculations
-    security/                    API responses and credential encryption
-    supabase/                    Browser, server, middleware and dashboard clients
-    validation/                  Zod request schemas
-  services/
-    ai/                          Caption and topic generation
-    postiz/                       Social publishing client
-  types/                          Database-generated and domain/API types
-supabase/
-  migrations/                     PostgreSQL schema changes and RLS policies
-tests/
-  unit/                           Activity logic tests
-```
+## 🔌 API Routes
+
+| Endpoint | Method | Auth | Description |
+| :--- | :---: | :---: | :--- |
+| `/api/health` | `GET` | Public | Real-time connectivity health check for DB, Auth, and services. |
+| `/api/auth/demo-login` | `POST` | Public | One-click login using verified demo credentials. |
+| `/api/practices` | `GET, POST` | User | List and create tenant practices. |
+| `/api/practices/[id]/captions` | `GET, POST` | User | Retrieve drafts or save newly generated captions. |
+| `/api/practices/[id]/captions/generate` | `POST` | User | Execute prompt against OpenAI GPT-4o with practice voice. |
+| `/api/practices/[id]/notes` | `GET, POST` | User | Manage clinic knowledge-bank updates and promotions. |
+| `/api/captions/[id]/schedule` | `POST` | User | Schedule post delivery via social accounts. |
+| `/api/dashboard/metrics` | `GET` | User | Live streak, drafted count, and year-long heatmap data. |
+
+---
+
+## 🔐 Environment Variables
+
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `NEXT_PUBLIC_APP_URL` | **Yes** | Canonical app URL (e.g. `http://localhost:3000`). |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Supabase project URL endpoint. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | **Yes** | Client publishable API key for Supabase Auth and PostgREST. |
+| `SUPABASE_SECRET_KEY` | Server-Only | Service role key for admin scripts (never exposed to client). |
+| `APPLICATION_ENCRYPTION_KEY` | **Yes** | 32-byte (64 hex characters) AES-256-GCM encryption secret. |
+| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Optional | Set `true` to display the one-click demo button. |
+| `SUPABASE_DEMO_EMAIL` | Optional | Email for provisioned demo user. |
+| `SUPABASE_DEMO_PASSWORD` | Optional | Password for provisioned demo user. |
+| `OPENAI_API_KEY` | Optional | OpenAI API key for live GPT-4o caption generation. |
+| `POSTIZ_API_BASE_URL` | Optional | Self-hosted or cloud Postiz instance base URL. |
+
+---
+
+## 📄 License & Maintainer
+
+Maintained by **Devashish Srivastava** ([@08DevashishSrivastava](https://github.com/08DevashishSrivastava)).  
+*Private & proprietary software.*

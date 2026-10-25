@@ -43,6 +43,7 @@ export async function POST() {
       user_id: authData.user.id,
       practice_id: practice?.id || null,
       onboarding_completed: practice?.onboarding_completed ?? false,
+      session: authData.session,
     })
   } catch (error) {
     console.error('[Demo Sign In Error]', error)

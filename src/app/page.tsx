@@ -76,6 +76,25 @@ const faqs = [
 export default function HomePage() {
   return (
     <div style={{ background: 'var(--color-bg)', minHeight: '100vh' }}>
+      {/* ─── Mobile App Mode Banner ────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(90deg, #064E3B 0%, #047857 100%)',
+        color: '#FFFFFF',
+        padding: '0.5rem 1rem',
+        fontSize: '0.8125rem',
+        fontWeight: 600,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.625rem',
+        textAlign: 'center',
+      }}>
+        <span>📱 Mobile App View Available:</span>
+        <Link href="/welcome" style={{ color: '#A7F3D0', textDecoration: 'underline', fontWeight: 700 }}>
+          Launch Mobile App Interface →
+        </Link>
+      </div>
+
       {/* ─── Navigation ─────────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
