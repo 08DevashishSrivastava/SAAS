@@ -22,45 +22,10 @@ function SignInForm() {
   )
   const [form, setForm] = useState({ email: '', password: '' })
 
-  async function handleDemoSignIn() {
+  function handleDemoSignIn() {
     setError('')
     setDemoLoading(true)
-    try {
-      // 1. First attempt: call API endpoint which manages server cookies
-      const response = await fetch('/api/auth/demo-login', { method: 'POST' })
-      const result = await response.json()
-      if (response.ok) {
-        if (result.session) {
-          try {
-            const supabase = createClient()
-            await supabase.auth.setSession({
-              access_token: result.session.access_token,
-              refresh_token: result.session.refresh_token,
-            })
-          } catch (syncErr) {
-            console.warn('[Demo Sign In] Client session sync notice:', syncErr)
-          }
-        }
-        window.location.href = redirectTo
-        return
-      }
-
-      // 2. Direct Supabase Client fallback if API route is blocked or fails
-      const supabase = createClient()
-      const { error: directAuthError } = await supabase.auth.signInWithPassword({
-        email: 'caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com',
-        password: 'CaptionDemo!2026-z9L8zwORKnvxl3jRm0g61ReUvcw-15Xb',
-      })
-      if (directAuthError) {
-        throw new Error(directAuthError.message)
-      }
-      window.location.href = redirectTo
-    } catch (demoError) {
-      console.error('[Demo Sign In Error]', demoError)
-      setError(demoError instanceof Error ? demoError.message : 'Unable to sign in to the demo account.')
-    } finally {
-      setDemoLoading(false)
-    }
+    window.location.href = `/api/auth/demo-login?redirect=${encodeURIComponent(redirectTo)}`
   }
 
   async function handleResendConfirmation() {
@@ -166,20 +131,18 @@ function SignInForm() {
           <p style={{ fontSize: '0.8125rem', color: 'var(--color-secondary-text)', margin: '0 0 0.875rem', lineHeight: 1.5 }}>
             Open the live dashboard with pre-loaded dental &amp; medical practice data.
           </p>
-          <button
-            type="button"
+          <a
+            href={`/api/auth/demo-login?redirect=${encodeURIComponent(redirectTo)}`}
             className="btn btn-primary"
-            disabled={loading || demoLoading}
-            onClick={handleDemoSignIn}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600, textDecoration: 'none' }}
           >
-            {demoLoading ? 'Opening Demo Dashboard…' : '⚡ Enter Live Demo Account'}
-          </button>
+            ⚡ Enter Live Demo Account (1-Click)
+          </a>
           <button
             type="button"
             onClick={() => setForm({
-              email: 'caption-ai-demo+rhtjqxicgwrnghxmwpmi@example.com',
-              password: 'CaptionDemo!2026-z9L8zwORKnvxl3jRm0g61ReUvcw-15Xb',
+              email: 'demo@captionai.com',
+              password: 'demo',
             })}
             style={{
               background: 'none', border: 'none', color: 'var(--color-primary)',
@@ -187,7 +150,7 @@ function SignInForm() {
               textDecoration: 'underline', width: '100%', textAlign: 'center',
             }}
           >
-            Or click here to autofill demo email &amp; password below
+            Or click here to autofill (demo@captionai.com / demo)
           </button>
         </div>
 

@@ -282,17 +282,15 @@ export default function MobileWelcomePage() {
         {/* ─── Primary Action Buttons ───────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {/* Main 1-Tap Demo Button */}
-          <button
-            type="button"
-            onClick={handleDemoSignIn}
-            disabled={loading}
+          <a
+            href="/api/auth/demo-login?redirect=/dashboard"
             style={{
               width: '100%',
               padding: '1.0625rem 1rem',
               borderRadius: 14,
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               color: '#042217',
-              border: 'none',
+              textDecoration: 'none',
               fontWeight: 800,
               fontSize: '1.0625rem',
               display: 'flex',
@@ -300,20 +298,20 @@ export default function MobileWelcomePage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.1875rem',
-              cursor: loading ? 'not-allowed' : 'pointer',
               boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
               transition: 'all 0.2s ease',
               minHeight: 56,
+              boxSizing: 'border-box',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span>⚡</span>
-              <span>{loading ? 'Opening Demo Dashboard…' : '1-Tap Demo Access'}</span>
+              <span>1-Tap Demo Access (Instant)</span>
             </div>
             <span style={{ fontSize: '0.6875rem', fontWeight: 600, opacity: 0.85 }}>
-              Instant Login · Preloaded Dental Practice Data
+              No Password Needed · Opens Practice Dashboard Directly
             </span>
-          </button>
+          </a>
 
           {/* Standard Sign In & Sign Up buttons */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
@@ -392,9 +390,9 @@ export default function MobileWelcomePage() {
               {copied ? '✓ Copied!' : 'Copy Info'}
             </button>
           </div>
-          <div style={{ fontSize: '0.6875rem', color: '#D1D5DB', fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.4 }}>
-            <div><strong>Email:</strong> {demoEmail}</div>
-            <div style={{ marginTop: '0.25rem' }}><strong>Pass:</strong> {demoPassword}</div>
+          <div style={{ fontSize: '0.75rem', color: '#D1D5DB', lineHeight: 1.5 }}>
+            <div><strong>Email:</strong> demo@captionai.com (or type &quot;demo&quot;)</div>
+            <div style={{ marginTop: '0.25rem' }}><strong>Password:</strong> demo</div>
           </div>
         </div>
 

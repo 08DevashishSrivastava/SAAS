@@ -1,6 +1,36 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const rawRedirect = url.searchParams.get('redirect')
+  const redirectTo = rawRedirect?.startsWith('/') && !rawRedirect.startsWith('//')
+    ? rawRedirect
+    : '/dashboard'
+
+  const email = process.env.SUPABASE_DEMO_EMAIL
+  const password = process.env.SUPABASE_DEMO_PASSWORD
+
+  if (!email || !password) {
+    return NextResponse.redirect(new URL('/sign-in?error=demo_not_configured', request.url))
+  }
+
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      console.error('[Demo Sign In GET Error]', error.message)
+      return NextResponse.redirect(new URL('/sign-in?error=demo_auth_failed', request.url))
+    }
+
+    return NextResponse.redirect(new URL(redirectTo, request.url))
+  } catch (err) {
+    console.error('[Demo Sign In GET Error]', err)
+    return NextResponse.redirect(new URL('/sign-in?error=demo_exception', request.url))
+  }
+}
+
 export async function POST() {
   if (process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN !== 'true') {
     return NextResponse.json(
