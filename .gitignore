@@ -38,6 +38,9 @@ yarn-error.log*
 
 # Testing
 coverage/
+
+# APK binaries
+*.apk
 .nyc_output/
 
 # Misc

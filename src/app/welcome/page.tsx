@@ -397,6 +397,27 @@ export default function MobileWelcomePage() {
             <div style={{ marginTop: '0.25rem' }}><strong>Pass:</strong> {demoPassword}</div>
           </div>
         </div>
+
+        {/* ─── Direct APK Download Button ──────────────────────────────────── */}
+        <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+          <a
+            href="/CaptionAI.apk"
+            download="CaptionAI.apk"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.375rem',
+              color: '#6EE7B7',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              textDecoration: 'underline',
+              padding: '0.5rem',
+            }}
+          >
+            📥 Direct Download CaptionAI.apk to this Phone
+          </a>
+        </div>
       </main>
 
       {/* ─── Bottom Footer Switcher ───────────────────────────────────────── */}
