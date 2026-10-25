@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { DEMO_EMAIL, DEMO_PASSWORD, IS_DEMO_ENABLED } from '@/lib/supabase/config'
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
@@ -8,12 +9,8 @@ export async function GET(request: Request) {
     ? rawRedirect
     : '/dashboard'
 
-  const email = process.env.SUPABASE_DEMO_EMAIL
-  const password = process.env.SUPABASE_DEMO_PASSWORD
-
-  if (!email || !password) {
-    return NextResponse.redirect(new URL('/sign-in?error=demo_not_configured', request.url))
-  }
+  const email = DEMO_EMAIL
+  const password = DEMO_PASSWORD
 
   try {
     const supabase = await createClient()
@@ -32,22 +29,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST() {
-  if (process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN !== 'true') {
+  if (!IS_DEMO_ENABLED) {
     return NextResponse.json(
-      { error: 'Demo sign-in is currently disabled. Set NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true to enable.' },
+      { error: 'Demo sign-in is currently disabled.' },
       { status: 403 }
     )
   }
 
-  const email = process.env.SUPABASE_DEMO_EMAIL
-  const password = process.env.SUPABASE_DEMO_PASSWORD
-  if (!email || !password) {
-    console.error('[Demo Sign In Error] Demo credentials are not configured in environment.')
-    return NextResponse.json(
-      { error: 'Demo credentials (SUPABASE_DEMO_EMAIL, SUPABASE_DEMO_PASSWORD) are not configured.' },
-      { status: 503 }
-    )
-  }
+  const email = DEMO_EMAIL
+  const password = DEMO_PASSWORD
 
   try {
     const supabase = await createClient()

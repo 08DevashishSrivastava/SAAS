@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase/config'
 
 interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy'
@@ -53,8 +54,8 @@ export async function GET() {
   }
 
   // 1. Configuration check
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const supabaseUrl = SUPABASE_URL
+  const supabaseAnonKey = SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
     result.status = 'unhealthy'
