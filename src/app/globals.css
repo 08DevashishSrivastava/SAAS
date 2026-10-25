@@ -610,7 +610,7 @@
     box-shadow: 0 0 0 3px rgb(33 133 104 / 0.12);
   }
 
-  .input:invalid, .input.error {
+  .input.error {
     border-color: var(--color-red);
   }
 

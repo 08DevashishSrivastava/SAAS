@@ -102,10 +102,16 @@ function SignInForm() {
     setError('')
     setLoading(true)
 
+    const rawEmail = form.email.trim().toLowerCase()
+    if (rawEmail === 'demo' || rawEmail.startsWith('demo@') || rawEmail.includes('caption-ai-demo')) {
+      await handleDemoSignIn()
+      return
+    }
+
     try {
       const supabase = createClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: form.email.trim().toLowerCase(),
+        email: rawEmail,
         password: form.password,
       })
 
@@ -224,9 +230,10 @@ function SignInForm() {
             <label className="label" htmlFor="email">Email address</label>
             <input
               id="email"
-              type="email"
+              type="text"
+              inputMode="email"
               className="input"
-              placeholder="jane@smileclinic.com"
+              placeholder="jane@smileclinic.com (or type 'demo')"
               value={form.email}
               onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
               autoComplete="email"
