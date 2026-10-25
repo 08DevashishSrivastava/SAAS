@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function MobileWelcomePage() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error] = useState('')
   const [copied, setCopied] = useState(false)
   const [activeSession, setActiveSession] = useState<{ email?: string } | null>(null)
   const [checkingSession, setCheckingSession] = useState(true)
@@ -30,53 +29,6 @@ export default function MobileWelcomePage() {
     }
     checkAuth()
   }, [])
-
-  async function handleDemoSignIn() {
-    setError('')
-    setLoading(true)
-    try {
-      // Step 1: Request session via server API to set HTTP cookies
-      const response = await fetch('/api/auth/demo-login', { method: 'POST' })
-      const result = await response.json()
-
-      if (response.ok) {
-        if (result.session) {
-          try {
-            const supabase = createClient()
-            await supabase.auth.setSession({
-              access_token: result.session.access_token,
-              refresh_token: result.session.refresh_token,
-            })
-          } catch (syncErr) {
-            console.warn('[Demo Sign In] Client session sync notice:', syncErr)
-          }
-        }
-        // Full navigation ensures WebView sends fresh cookies on initial SSR
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.href = '/dashboard'
-        return
-      }
-
-      // Step 2: Resilient client-side fallback directly to Supabase Auth
-      const supabase = createClient()
-      const { error: directAuthError } = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPassword,
-      })
-
-      if (directAuthError) {
-        throw new Error(directAuthError.message)
-      }
-
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = '/dashboard'
-    } catch (demoError) {
-      console.error('[Demo Sign In Error]', demoError)
-      setError(demoError instanceof Error ? demoError.message : 'Unable to sign in to demo account.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   function copyCredentials() {
     navigator.clipboard?.writeText(`Email: ${demoEmail}\nPassword: ${demoPassword}`)

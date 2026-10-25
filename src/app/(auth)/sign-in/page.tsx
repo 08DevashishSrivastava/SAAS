@@ -25,6 +25,7 @@ function SignInForm() {
   function handleDemoSignIn() {
     setError('')
     setDemoLoading(true)
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = `/api/auth/demo-login?redirect=${encodeURIComponent(redirectTo)}`
   }
 

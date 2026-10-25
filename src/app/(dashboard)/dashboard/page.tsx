@@ -70,7 +70,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200 }}>
+    <div className="dashboard-page-container" style={{ padding: '2rem', maxWidth: 1200, width: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.625rem', marginBottom: '0.25rem' }}>
@@ -106,7 +106,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="dashboard-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {metrics.map((m) => (
           <div key={m.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ width: 48, height: 48, borderRadius: 12, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent captions + notes */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+      <div className="dashboard-split-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         {/* Recent captions */}
         <div className="card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
